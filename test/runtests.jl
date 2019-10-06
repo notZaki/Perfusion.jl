@@ -15,10 +15,12 @@ using UnicodePlots
         "Parker" => aif_parker,
         "Weinmann" => aif_weinmann
     )
-    plot_cfg(name) = (name=name, xlabel = "Gd [mM]", ylabel = "time [min]", canvas = DotCanvas)
+    plot_cfg(name) = (title=name, xlabel = "Gd [mM]", ylabel = "time [min]", canvas = DotCanvas)
+    printdiv() = printstyled("\n==================================================================================\n", color=:light_black);
 
     for (name, func) in aifs_to_test
         println( lineplot(scan_timepoints, func(aif_timepoints); plot_cfg(name)...) )
+        printdiv()
     end
 
 end
