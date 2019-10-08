@@ -3,13 +3,13 @@ function expconv(A::AbstractVector, B::Number, t::AbstractVector)
     # Based on Flouri et al. (2016) MRM 76(3), doi: 10.1002/mrm.25991
     @assert length(A) == length(t)
     f = zeros(length(t))
-    @simd for i in 1:length(t)-1
-        x = B * (t[i+1] - t[i])
-        dA = (A[i+1] - A[i]) / x
+    for i in 2:length(t)
+        x = B * (t[i] - t[i-1])
+        dA = (A[i] - A[i-1]) / x
         E = exp(-x)
         E0 = 1 - E
         E1 = x - E0
-        @inbounds f[i+1] = E*f[i] + A[i] * E0 + dA * E1
+        f[i] = E*f[i-1] + A[i-1] * E0 + dA * E1
     end
     return f ./ B
 end
