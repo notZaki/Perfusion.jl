@@ -31,9 +31,17 @@ end
     test_params = (ktrans = 0.25, kep = 0.5)
     Ct = model_tofts(t=t, Cp=Cp, parameters=test_params)
 
-    estimates = fit_tofts(t=t, Cp=Cp, Ct=Ct).estimates
+    estimates = fit_tofts(t=t, Cp=Cp, Ct=Ct, mask=[true]).estimates
     @test round(estimates.ktrans[1], digits=3) == test_params.ktrans
     @test round(estimates.kep[1], digits=3) == test_params.kep
+
+    estimates = fit_tofts(t=t, Cp=Cp, Ct=Ct, method=:NLS).estimates
+    @test round(estimates.ktrans[1], digits=3) == test_params.ktrans
+    @test round(estimates.kep[1], digits=3) == test_params.kep
+
+    @test fit_tofts(t=t, Cp=Cp, Ct=Ct, mask=false).estimates == (ktrans=[0.0], kep=[0.0])
+    @test_throws ErrorException fit_tofts(t=t, Cp=Cp, Ct=Ct, method=:NLLS)
+    @test_throws ErrorException fit_tofts(t=t, Cp=Cp, Ct=Ct, mask=[true, true])
 end
 
 @testset "Extended Tofts model" begin
@@ -42,8 +50,18 @@ end
 
     test_params = (ktrans = 0.5, kep = 1.0, vp = 0.1)
     Ct = model_tofts(t=t, Cp=Cp, parameters=test_params)
+
     estimates = fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, mask=[true]).estimates
     @test round(estimates.ktrans[1], digits=3) == test_params.ktrans
     @test round(estimates.kep[1], digits=3) == test_params.kep
     @test round(estimates.vp[1], digits=3) == test_params.vp
+
+    estimates = fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, method=:NLS).estimates
+    @test round(estimates.ktrans[1], digits=3) == test_params.ktrans
+    @test round(estimates.kep[1], digits=3) == test_params.kep
+    @test round(estimates.vp[1], digits=3) == test_params.vp
+
+    @test fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, mask=false).estimates == (ktrans=[0.0], kep=[0.0], vp=[0.0])
+    @test_throws ErrorException fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, method=:NLLS)
+    @test_throws ErrorException fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, mask=[true, true])
 end

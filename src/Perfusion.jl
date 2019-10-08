@@ -12,7 +12,8 @@ export aif_biexponential, aif_fritzhansen, aif_weinmann
 export aif_orton1, aif_orton2, aif_orton3
 export aif_georgiou, aif_parker
 
-using NumericalIntegration: cumul_integrate
+using NumericalIntegration: cumul_integrate, TrapezoidalFast
+using LsqFit
 include("model_fitting.jl")
 export model_tofts, fit_tofts, fit_extendedtofts
 

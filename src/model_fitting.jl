@@ -23,7 +23,49 @@ function model_tofts(;t::AbstractVector, parameters::NamedTuple, Cp::AbstractVec
     return Ct
 end
 
-function fit_tofts(; t::AbstractVector, Cp::AbstractVector, Ct::AbstractArray, mask=true)
+function resolve_mask_size(mask, desired_size)
+    if size(mask) == desired_size
+        return mask .> 0
+    elseif size(mask) == ()
+        return repeat([mask .> 0], desired_size...)
+    else
+        error("Mask size: $(size(mask)) does not match input size $(desired_size)")
+    end
+end
+
+function fit_tofts(; method=:LLS, kwargs...)
+    if method == :LLS
+        return fit_tofts_lls(; kwargs...)
+    elseif method == :NLS
+        return fit_tofts_nls(; kwargs...)
+    else
+        error("Unsupported method: $(method)")
+    end
+end
+
+function fit_tofts_nls(; t::AbstractVector, Cp::AbstractVector, Ct::AbstractArray, mask=true)
+    @assert length(t) == length(Cp) == size(Ct)[end]
+    num_timepoints = length(t)
+    if typeof(Ct) <: AbstractVector
+        @assert length(Ct) == num_timepoints
+        Ct = reshape(Ct, 1, num_timepoints)
+    end
+    volume_size = size(Ct)[1:end-1]
+    ktrans, kep = (zeros(volume_size...) for _=1:2)
+    resolved_mask = resolve_mask_size(mask, volume_size)
+
+    model(x, p) = model_tofts(t=x, Cp=Cp, parameters=(ktrans=p[1], kep=p[2]))
+    initialvalues = [0.01, 0.01]
+    for idx in eachindex(IndexCartesian(), resolved_mask)
+        if resolved_mask[idx] == false
+            continue
+        end
+        (ktrans[idx], kep[idx]) = curve_fit(model, t, Ct[idx, :], initialvalues).param
+    end
+    return(estimates=(ktrans=ktrans, kep=kep), dummy=0)
+end
+
+function fit_tofts_lls(; t::AbstractVector, Cp::AbstractVector, Ct::AbstractArray, mask=true)
     @assert length(t) == length(Cp) == size(Ct)[end]
     num_timepoints = length(t)
     if typeof(Ct) <: AbstractVector
@@ -46,7 +88,17 @@ function fit_tofts(; t::AbstractVector, Cp::AbstractVector, Ct::AbstractArray, m
     return(estimates=(ktrans=ktrans, kep=kep), dummy=0)
 end
 
-function fit_extendedtofts(;t::AbstractVector, Cp::AbstractVector, Ct::AbstractArray, mask=true)
+function fit_extendedtofts(; method=:LLS, kwargs...)
+    if method == :LLS
+        return fit_extendedtofts_lls(; kwargs...)
+    elseif method == :NLS
+        return fit_extendedtofts_nls(; kwargs...)
+    else
+        error("Unsupported method: $(method)")
+    end
+end
+
+function fit_extendedtofts_lls(;t::AbstractVector, Cp::AbstractVector, Ct::AbstractArray, mask=true)
     @assert length(t) == length(Cp) == size(Ct)[end]
     num_timepoints = length(t)
     if typeof(Ct) <: AbstractVector
@@ -72,12 +124,24 @@ function fit_extendedtofts(;t::AbstractVector, Cp::AbstractVector, Ct::AbstractA
     return(estimates=(ktrans=ktrans, kep=kep, vp=vp), dummy=0)
 end
 
-function resolve_mask_size(mask, desired_size)
-    if size(mask) == desired_size
-        return mask .> 0
-    elseif size(mask) == ()
-        return repeat([mask .> 0], desired_size...)
-    else
-        error("Mask size: $(size(mask)) does not match input size $(desired_size)")
+function fit_extendedtofts_nls(; t::AbstractVector, Cp::AbstractVector, Ct::AbstractArray, mask=true)
+    @assert length(t) == length(Cp) == size(Ct)[end]
+    num_timepoints = length(t)
+    if typeof(Ct) <: AbstractVector
+        @assert length(Ct) == num_timepoints
+        Ct = reshape(Ct, 1, num_timepoints)
     end
+    volume_size = size(Ct)[1:end-1]
+    ktrans, kep, vp = (zeros(volume_size...) for _=1:3)
+    resolved_mask = resolve_mask_size(mask, volume_size)
+
+    model(x, p) = model_tofts(t=x, Cp=Cp, parameters=(ktrans=p[1], kep=p[2], vp=p[3]))
+    initialvalues = [0.01, 0.01, 0.01]
+    for idx in eachindex(IndexCartesian(), resolved_mask)
+        if resolved_mask[idx] == false
+            continue
+        end
+        (ktrans[idx], kep[idx], vp[idx]) = curve_fit(model, t, Ct[idx, :], initialvalues).param
+    end
+    return(estimates=(ktrans=ktrans, kep=kep, vp=vp), dummy=0)
 end
