@@ -33,10 +33,10 @@ function resolve_mask_size(mask, desired_size)
     end
 end
 
-function fit_tofts(; method=:LLS, kwargs...)
-    if method == :LLS
+function fit_tofts(; method=:lls, kwargs...)
+    if method == :lls
         return fit_tofts_lls(; kwargs...)
-    elseif method == :NLS
+    elseif method == :nls
         return fit_tofts_nls(; kwargs...)
     else
         error("Unsupported method: $(method)")
@@ -88,10 +88,10 @@ function fit_tofts_lls(; t::AbstractVector, Cp::AbstractVector, Ct::AbstractArra
     return(estimates=(ktrans=ktrans, kep=kep), dummy=0)
 end
 
-function fit_extendedtofts(; method=:LLS, kwargs...)
-    if method == :LLS
+function fit_extendedtofts(; method=:lls, kwargs...)
+    if method == :lls
         return fit_extendedtofts_lls(; kwargs...)
-    elseif method == :NLS
+    elseif method == :nls
         return fit_extendedtofts_nls(; kwargs...)
     else
         error("Unsupported method: $(method)")

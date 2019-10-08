@@ -35,11 +35,12 @@ end
     @test round(estimates.ktrans[1], digits=3) == test_params.ktrans
     @test round(estimates.kep[1], digits=3) == test_params.kep
 
-    estimates = fit_tofts(t=t, Cp=Cp, Ct=Ct, method=:NLS).estimates
+    estimates = fit_tofts(t=t, Cp=Cp, Ct=Ct, method=:nls).estimates
     @test round(estimates.ktrans[1], digits=3) == test_params.ktrans
     @test round(estimates.kep[1], digits=3) == test_params.kep
 
     @test fit_tofts(t=t, Cp=Cp, Ct=Ct, mask=false).estimates == (ktrans=[0.0], kep=[0.0])
+    @test fit_tofts(t=t, Cp=Cp, Ct=Ct, mask=false, method=:nls).estimates == (ktrans=[0.0], kep=[0.0])
     @test_throws ErrorException fit_tofts(t=t, Cp=Cp, Ct=Ct, method=:NLLS)
     @test_throws ErrorException fit_tofts(t=t, Cp=Cp, Ct=Ct, mask=[true, true])
 end
@@ -56,12 +57,13 @@ end
     @test round(estimates.kep[1], digits=3) == test_params.kep
     @test round(estimates.vp[1], digits=3) == test_params.vp
 
-    estimates = fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, method=:NLS).estimates
+    estimates = fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, method=:nls).estimates
     @test round(estimates.ktrans[1], digits=3) == test_params.ktrans
     @test round(estimates.kep[1], digits=3) == test_params.kep
     @test round(estimates.vp[1], digits=3) == test_params.vp
 
     @test fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, mask=false).estimates == (ktrans=[0.0], kep=[0.0], vp=[0.0])
+    @test fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, mask=false, method=:nls).estimates == (ktrans=[0.0], kep=[0.0], vp=[0.0])
     @test_throws ErrorException fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, method=:NLLS)
     @test_throws ErrorException fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, mask=[true, true])
 end
