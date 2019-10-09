@@ -24,7 +24,13 @@ function model_tofts(; t::AbstractVector, parameters::NamedTuple, cp::AbstractVe
 end
 
 function model_exchange(; t::AbstractVector, parameters::NamedTuple, ca::AbstractVector)
-    @extract (fp, ps, ve, vp) parameters
+    if all(haskey(parameters, key) for key in (:Tp, :Te))
+        @extract (ve, vp) parameters
+        fp = vp / parameters.Tp
+        ps = ve / parameters.Te
+    else
+        @extract (fp, ps, ve, vp) parameters
+    end
     Tp = vp / fp
     Te = ve / ps
     T = (vp + ve) / fp
@@ -105,7 +111,13 @@ function fit_exchange_nls(; t::AbstractVector, ca::AbstractVector, ct::AbstractA
 end
 
 function model_filtration(; t::AbstractVector, parameters::NamedTuple, ca::AbstractVector)
-    @extract (fp, ps, ve, vp) parameters
+    if all(haskey(parameters, key) for key in (:Tp, :Te))
+        @extract (ve, vp) parameters
+        fp = vp / parameters.Tp
+        ps = ve / parameters.Te
+    else
+        @extract (fp, ps, ve, vp) parameters
+    end
     Tminus = vp/fp
     Tplus = ve/ps
     T = (vp+ve)/fp

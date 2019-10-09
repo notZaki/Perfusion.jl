@@ -116,6 +116,13 @@ end
     @test iszero(maximum(fit_model(:exchange, :lls, t=t, ca=ca, ct=ct, mask=false).estimates))
     @test iszero(maximum(fit_model(:exchange, :nls, t=t, ca=ca, ct=ct, mask=[false]).estimates))
     @test_throws ErrorException fit_model(:exchange, t=t, ca=ca, ct=ct, mask=[true, true])
+
+    fp, ps, vp, ve = (0.75, 0.05, 0.25, 0.10)
+    params_a = (fp = fp, ps = ps, vp = vp, ve = ve)
+    params_b = (Tp = vp/fp, Te = ve/ps, vp = vp, ve=ve)
+    ct_a = model_exchange(t=t, ca=ca, parameters=params_a)
+    ct_b = model_exchange(t=t, ca=ca, parameters=params_b)
+    @test ct_a ≈ ct_b
 end
 
 @testset "Two compartment filtration model" begin
@@ -140,4 +147,11 @@ end
     @test iszero(maximum(fit_model(:filtration, :lls, t=t, ca=ca, ct=ct, mask=false).estimates))
     @test iszero(maximum(fit_model(:filtration, :nls, t=t, ca=ca, ct=ct, mask=[false]).estimates))
     @test_throws ErrorException fit_model(:filtration, t=t, ca=ca, ct=ct, mask=[true, true])
+
+    fp, ps, vp, ve = (0.75, 0.05, 0.25, 0.10)
+    params_a = (fp = fp, ps = ps, vp = vp, ve = ve)
+    params_b = (Tp = vp/fp, Te = ve/ps, vp = vp, ve=ve)
+    ct_a = model_filtration(t=t, ca=ca, parameters=params_a)
+    ct_b = model_filtration(t=t, ca=ca, parameters=params_b)
+    @test ct_a ≈ ct_b
 end
