@@ -28,21 +28,21 @@ end
     t = collect(1:600) ./ 60
     cp = aif_parker(t .- 1)
 
-    test_params = (ktrans = 0.25, kep = 0.5)
+    test_params = (kt = 0.25, kep = 0.5)
     ct = model_tofts(t=t, cp=cp, parameters=test_params)
 
     estimates = fit_model(:tofts, :lls, t=t, cp=cp, ct=ct, mask=[true]).estimates
-    @test round(estimates.ktrans[1], digits=3) == test_params.ktrans
+    @test round(estimates.kt[1], digits=3) == test_params.kt
     @test round(estimates.kep[1], digits=3) == test_params.kep
 
     estimates = fit_model(:tofts, t=t, cp=cp, ct=ct).estimates
-    @test round(estimates.ktrans[1], digits=3) == test_params.ktrans
+    @test round(estimates.kt[1], digits=3) == test_params.kt
     @test round(estimates.kep[1], digits=3) == test_params.kep
 
     @test fit_model(:tofts, :lls, t=t, cp=cp, ct=ct, mask=false).estimates ==
-        (ktrans=[0.0], kep=[0.0])
+        (kt=[0.0], kep=[0.0])
     @test fit_model(:tofts, t=t, cp=cp, ct=ct, mask=false).estimates ==
-        (ktrans=[0.0], kep=[0.0])
+        (kt=[0.0], kep=[0.0])
     @test_throws ErrorException fit_model(:tofts, t=t, cp=cp, ct=ct, mask=[true, true])
 end
 
@@ -50,23 +50,23 @@ end
     t = collect(1:600) ./ 60
     cp = aif_georgiou(t .- 1)
 
-    test_params = (ktrans = 0.5, kep = 1.0, vp = 0.1)
+    test_params = (kt = 0.5, kep = 1.0, vp = 0.1)
     ct = model_tofts(t=t, cp=cp, parameters=test_params)
 
     estimates = fit_model(:extendedtofts, :lls, t=t, cp=cp, ct=ct, mask=[true]).estimates
-    @test round(estimates.ktrans[1], digits=3) == test_params.ktrans
+    @test round(estimates.kt[1], digits=3) == test_params.kt
     @test round(estimates.kep[1], digits=3) == test_params.kep
     @test round(estimates.vp[1], digits=3) == test_params.vp
 
     estimates = fit_model(:extendedtofts, t=t, cp=cp, ct=ct).estimates
-    @test round(estimates.ktrans[1], digits=3) == test_params.ktrans
+    @test round(estimates.kt[1], digits=3) == test_params.kt
     @test round(estimates.kep[1], digits=3) == test_params.kep
     @test round(estimates.vp[1], digits=3) == test_params.vp
 
     @test fit_model(:extendedtofts, :lls, t=t, cp=cp, ct=ct, mask=false).estimates ==
-        (ktrans=[0.0], kep=[0.0], vp=[0.0])
+        (kt=[0.0], kep=[0.0], vp=[0.0])
     @test fit_model(:extendedtofts, :nls, t=t, cp=cp, ct=ct, mask=false).estimates ==
-        (ktrans=[0.0], kep=[0.0], vp=[0.0])
+        (kt=[0.0], kep=[0.0], vp=[0.0])
     @test_throws ErrorException fit_model(:extendedtofts, t=t, cp=cp, ct=ct, mask=[true, true])
 end
 
