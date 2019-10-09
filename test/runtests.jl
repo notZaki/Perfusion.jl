@@ -31,18 +31,19 @@ end
     test_params = (ktrans = 0.25, kep = 0.5)
     Ct = model_tofts(t=t, Cp=Cp, parameters=test_params)
 
-    estimates = fit_tofts(t=t, Cp=Cp, Ct=Ct, mask=[true]).estimates
+    estimates = fit_model(:tofts, :lls, t=t, Cp=Cp, Ct=Ct, mask=[true]).estimates
     @test round(estimates.ktrans[1], digits=3) == test_params.ktrans
     @test round(estimates.kep[1], digits=3) == test_params.kep
 
-    estimates = fit_tofts(t=t, Cp=Cp, Ct=Ct, method=:nls).estimates
+    estimates = fit_model(:tofts, t=t, Cp=Cp, Ct=Ct).estimates
     @test round(estimates.ktrans[1], digits=3) == test_params.ktrans
     @test round(estimates.kep[1], digits=3) == test_params.kep
 
-    @test fit_tofts(t=t, Cp=Cp, Ct=Ct, mask=false).estimates == (ktrans=[0.0], kep=[0.0])
-    @test fit_tofts(t=t, Cp=Cp, Ct=Ct, mask=false, method=:nls).estimates == (ktrans=[0.0], kep=[0.0])
-    @test_throws ErrorException fit_tofts(t=t, Cp=Cp, Ct=Ct, method=:NLLS)
-    @test_throws ErrorException fit_tofts(t=t, Cp=Cp, Ct=Ct, mask=[true, true])
+    @test fit_model(:tofts, :lls, t=t, Cp=Cp, Ct=Ct, mask=false).estimates ==
+        (ktrans=[0.0], kep=[0.0])
+    @test fit_model(:tofts, t=t, Cp=Cp, Ct=Ct, mask=false).estimates ==
+        (ktrans=[0.0], kep=[0.0])
+    @test_throws ErrorException fit_model(:tofts, t=t, Cp=Cp, Ct=Ct, mask=[true, true])
 end
 
 @testset "Extended Tofts model" begin
@@ -52,18 +53,91 @@ end
     test_params = (ktrans = 0.5, kep = 1.0, vp = 0.1)
     Ct = model_tofts(t=t, Cp=Cp, parameters=test_params)
 
-    estimates = fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, mask=[true]).estimates
+    estimates = fit_model(:extendedtofts, :lls, t=t, Cp=Cp, Ct=Ct, mask=[true]).estimates
     @test round(estimates.ktrans[1], digits=3) == test_params.ktrans
     @test round(estimates.kep[1], digits=3) == test_params.kep
     @test round(estimates.vp[1], digits=3) == test_params.vp
 
-    estimates = fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, method=:nls).estimates
+    estimates = fit_model(:extendedtofts, t=t, Cp=Cp, Ct=Ct).estimates
     @test round(estimates.ktrans[1], digits=3) == test_params.ktrans
     @test round(estimates.kep[1], digits=3) == test_params.kep
     @test round(estimates.vp[1], digits=3) == test_params.vp
 
-    @test fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, mask=false).estimates == (ktrans=[0.0], kep=[0.0], vp=[0.0])
-    @test fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, mask=false, method=:nls).estimates == (ktrans=[0.0], kep=[0.0], vp=[0.0])
-    @test_throws ErrorException fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, method=:NLLS)
-    @test_throws ErrorException fit_extendedtofts(t=t, Cp=Cp, Ct=Ct, mask=[true, true])
+    @test fit_model(:extendedtofts, :lls, t=t, Cp=Cp, Ct=Ct, mask=false).estimates ==
+        (ktrans=[0.0], kep=[0.0], vp=[0.0])
+    @test fit_model(:extendedtofts, :nls, t=t, Cp=Cp, Ct=Ct, mask=false).estimates ==
+        (ktrans=[0.0], kep=[0.0], vp=[0.0])
+    @test_throws ErrorException fit_model(:extendedtofts, t=t, Cp=Cp, Ct=Ct, mask=[true, true])
+end
+
+@testset "Compartmental tissue uptake model" begin
+    t = collect(1:600) ./ 60
+    ca = aif_georgiou(t .- 1)
+
+    test_params = (fp = 0.75, ps = 0.05, vp = 0.25)
+    Ct = model_uptake(t=t, ca=ca, parameters=test_params)
+
+    estimates = fit_model(:uptake, :lls, t=t, ca=ca, Ct=Ct, mask=[true]).estimates
+    @test round(estimates.fp[1], digits=2) == test_params.fp
+    @test round(estimates.ps[1], digits=2) == test_params.ps
+    @test round(estimates.vp[1], digits=2) == test_params.vp
+
+    estimates = fit_model(:uptake, :nls, t=t, ca=ca, Ct=Ct, mask=[true]).estimates
+    @test round(estimates.fp[1], digits=3) == test_params.fp
+    @test round(estimates.ps[1], digits=3) == test_params.ps
+    @test round(estimates.vp[1], digits=3) == test_params.vp
+
+    @test fit_model(:uptake, :lls, t=t, ca=ca, Ct=Ct, mask=false).estimates ==
+        (fp=[0.0], ps=[0.0], vp=[0.0])
+    @test fit_model(:uptake, :nls, t=t, ca=ca, Ct=Ct, mask=[false]).estimates ==
+        (fp=[0.0], ps=[0.0], vp=[0.0])
+    @test_throws ErrorException fit_model(:uptake, t=t, ca=ca, Ct=Ct, mask=[true, true])
+end
+
+@testset "Two compartment exchange model" begin
+    t = collect(1:600) ./ 60
+    ca = aif_georgiou(t .- 1)
+
+    test_params = (fp = 0.75, ps = 0.05, vp = 0.25, ve = 0.10)
+    Ct = model_exchange(t=t, ca=ca, parameters=test_params)
+
+    estimates = fit_model(:exchange, :lls, t=t, ca=ca, Ct=Ct, mask=[true]).estimates
+    @test round(estimates.fp[1], digits=3) == test_params.fp
+    @test round(estimates.ps[1], digits=3) == test_params.ps
+    @test round(estimates.ve[1], digits=3) == test_params.ve
+    @test round(estimates.vp[1], digits=3) == test_params.vp
+
+    estimates = fit_model(:exchange, :nls, t=t, ca=ca, Ct=Ct, mask=[true]).estimates
+    @test round(estimates.fp[1], digits=3) == test_params.fp
+    @test round(estimates.ps[1], digits=3) == test_params.ps
+    @test round(estimates.ve[1], digits=3) == test_params.ve
+    @test round(estimates.vp[1], digits=3) == test_params.vp
+
+    @test iszero(maximum(fit_model(:exchange, :lls, t=t, ca=ca, Ct=Ct, mask=false).estimates))
+    @test iszero(maximum(fit_model(:exchange, :nls, t=t, ca=ca, Ct=Ct, mask=[false]).estimates))
+    @test_throws ErrorException fit_model(:exchange, t=t, ca=ca, Ct=Ct, mask=[true, true])
+end
+
+@testset "Two compartment filtration model" begin
+    t = collect(1:600) ./ 60
+    ca = aif_georgiou(t .- 1)
+
+    test_params = (fp = 0.75, ps = 0.05, vp = 0.25, ve = 0.10)
+    Ct = model_filtration(t=t, ca=ca, parameters=test_params)
+
+    estimates = fit_model(:filtration, :lls, t=t, ca=ca, Ct=Ct, mask=[true]).estimates
+    @test round(estimates.fp[1], digits=3) == test_params.fp
+    @test round(estimates.ps[1], digits=3) == test_params.ps
+    @test round(estimates.ve[1], digits=3) == test_params.ve
+    @test round(estimates.vp[1], digits=3) == test_params.vp
+
+    estimates = fit_model(:filtration, :nls, t=t, ca=ca, Ct=Ct, mask=[true]).estimates
+    @test round(estimates.fp[1], digits=3) == test_params.fp
+    @test round(estimates.ps[1], digits=3) == test_params.ps
+    @test round(estimates.ve[1], digits=3) == test_params.ve
+    @test round(estimates.vp[1], digits=3) == test_params.vp
+
+    @test iszero(maximum(fit_model(:filtration, :lls, t=t, ca=ca, Ct=Ct, mask=false).estimates))
+    @test iszero(maximum(fit_model(:filtration, :nls, t=t, ca=ca, Ct=Ct, mask=[false]).estimates))
+    @test_throws ErrorException fit_model(:filtration, t=t, ca=ca, Ct=Ct, mask=[true, true])
 end

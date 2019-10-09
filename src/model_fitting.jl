@@ -9,12 +9,12 @@ function expconv(A::AbstractVector, B::Number, t::AbstractVector)
         E = exp(-x)
         E0 = 1 - E
         E1 = x - E0
-        f[i] = E*f[i-1] + A[i-1] * E0 + dA * E1
+        f[i] = E * f[i-1] + A[i-1] * E0 + dA * E1
     end
     return f ./ B
 end
 
-function model_tofts(;t::AbstractVector, parameters::NamedTuple, Cp::AbstractVector)
+function model_tofts(; t::AbstractVector, parameters::NamedTuple, Cp::AbstractVector)
     @extract (ktrans, kep) parameters
     Ct = ktrans * expconv(Cp, kep, t)
     if haskey(parameters, :vp)
@@ -23,24 +23,229 @@ function model_tofts(;t::AbstractVector, parameters::NamedTuple, Cp::AbstractVec
     return Ct
 end
 
-function resolve_mask_size(mask, desired_size)
-    if size(mask) == desired_size
-        return mask .> 0
-    elseif size(mask) == ()
-        return repeat([mask .> 0], desired_size...)
-    else
-        error("Mask size: $(size(mask)) does not match input size $(desired_size)")
-    end
+function model_exchange(; t::AbstractVector, parameters::NamedTuple, ca::AbstractVector)
+    @extract (fp, ps, ve, vp) parameters
+    Tp = vp / fp
+    Te = ve / ps
+    T = (vp + ve) / fp
+    Tplus = (T + Te + sqrt((T + Te)^2 - 4 * Tp * Te)) / 2
+    Tminus = (T + Te - sqrt((T + Te)^2 - 4 * Tp * Te)) / 2
+    Ct = ((T - Tminus) / (Tplus - Tminus)) .* expconv(ca, 1/Tplus, t)
+    Ct .+= ((Tplus - T) / (Tplus - Tminus)) .* expconv(ca, 1/Tminus, t)
+    Ct .*= fp
+    return Ct
 end
 
-function fit_tofts(; method=:lls, kwargs...)
-    if method == :lls
-        return fit_tofts_lls(; kwargs...)
-    elseif method == :nls
-        return fit_tofts_nls(; kwargs...)
-    else
-        error("Unsupported method: $(method)")
+function fit_exchange_lls(; t::AbstractVector, ca::AbstractVector, Ct::AbstractArray, mask=true)
+    @assert length(t) == length(ca) == size(Ct)[end]
+    num_timepoints = length(t)
+    if typeof(Ct) <: AbstractVector
+        @assert length(Ct) == num_timepoints
+        Ct = reshape(Ct, 1, num_timepoints)
     end
+    volume_size = size(Ct)[1:end-1]
+    α, β, γ, fp = (zeros(volume_size...) for _=1:4)
+    resolved_mask = resolve_mask_size(mask, volume_size)
+
+    M = zeros(num_timepoints, 4)
+    M[:,4] .= cumul_integrate(t, ca, TrapezoidalFast())
+    M[:,3] .= cumul_integrate(t, M[:,4], TrapezoidalFast())
+    for idx in eachindex(IndexCartesian(), resolved_mask)
+        if resolved_mask[idx] == false
+            continue
+        end
+        M[:,2] .= -cumul_integrate(t, Ct[idx,:], TrapezoidalFast())
+        M[:,1] .= cumul_integrate(t, M[:,2], TrapezoidalFast())
+        α[idx], β[idx], γ[idx], fp[idx] = M \ Ct[idx,:]
+    end
+    T  = @. γ / (α * fp)
+    Te = @. (β / α) - T
+    Tp = @. 1 / (α * Te)
+    @. T = nan_to_zero(T)
+    @. Te = nan_to_zero(Te)
+    @. Tp = nan_to_zero(Tp)
+    vp = @. fp * Tp
+    ve = @. fp * (T - Tp)
+    ps = @. ve / Te
+    @. ps = nan_to_zero(ps)
+    return(estimates=(fp=fp, ps=ps, ve=ve, vp=vp, T=T, Te=Te, Tp=Tp), dummy=0)
+end
+
+function nan_to_zero(x)
+    return isnan(x) ? 0 : x
+end
+
+function fit_exchange_nls(; t::AbstractVector, ca::AbstractVector, Ct::AbstractArray, mask=true)
+    @assert length(t) == length(ca) == size(Ct)[end]
+    num_timepoints = length(t)
+    if typeof(Ct) <: AbstractVector
+        @assert length(Ct) == num_timepoints
+        Ct = reshape(Ct, 1, num_timepoints)
+    end
+    volume_size = size(Ct)[1:end-1]
+    fp, ps, vp, ve = (zeros(volume_size...) for _=1:4)
+    resolved_mask = resolve_mask_size(mask, volume_size)
+    model(x, p) = model_exchange(t=x, ca=ca, parameters=(fp=p[1], ps=p[2], ve=p[3], vp=p[4]))
+    lls_estimates = fit_exchange_lls(t=t, ca=ca, Ct=Ct).estimates
+    init_fp, init_ps, init_ve, init_vp = select(lls_estimates, (:fp, :ps, :ve, :vp))
+    for idx in eachindex(IndexCartesian(), resolved_mask)
+        if resolved_mask[idx] == false
+            continue
+        end
+        initialvalue = [init_fp[idx], init_ps[idx], init_ve[idx], init_vp[idx]]
+        fp[idx], ps[idx], ve[idx], vp[idx] = curve_fit(model, t, Ct[idx, :], initialvalue).param
+    end
+    T  = @. (vp + ve) / fp
+    Tp = @. vp / fp
+    Te = @. ve / ps
+    @. T[fp == 0] = 0
+    @. Tp[fp == 0] = 0
+    @. Te[ps == 0] = 0
+    return(estimates=(fp=fp, ps=ps, ve=ve, vp=vp, T=T, Tp=Tp, Te=Te), dummy=0)
+end
+
+function model_filtration(; t::AbstractVector, parameters::NamedTuple, ca::AbstractVector)
+    @extract (fp, ps, ve, vp) parameters
+    Tminus = vp/fp
+    Tplus = ve/ps
+    T = (vp+ve)/fp
+    Ct = ((T - Tminus) / (Tplus - Tminus)) .* expconv(ca, 1/Tplus, t)
+    Ct .+= ((Tplus - T) / (Tplus - Tminus)) .* expconv(ca, 1/Tminus, t)
+    Ct .*= fp
+    return Ct
+end
+
+function fit_filtration_lls(; t::AbstractVector, ca::AbstractVector, Ct::AbstractArray, mask=true)
+    @assert length(t) == length(ca) == size(Ct)[end]
+    num_timepoints = length(t)
+    if typeof(Ct) <: AbstractVector
+        @assert length(Ct) == num_timepoints
+        Ct = reshape(Ct, 1, num_timepoints)
+    end
+    volume_size = size(Ct)[1:end-1]
+    α, β, γ, fp = (zeros(volume_size...) for _=1:4)
+    resolved_mask = resolve_mask_size(mask, volume_size)
+
+    M = zeros(num_timepoints, 4)
+    M[:,4] .= cumul_integrate(t, ca, TrapezoidalFast())
+    M[:,3] .= cumul_integrate(t, M[:,4], TrapezoidalFast())
+    for idx in eachindex(IndexCartesian(), resolved_mask)
+        if resolved_mask[idx] == false
+            continue
+        end
+        M[:,2] .= -cumul_integrate(t, Ct[idx,:], TrapezoidalFast())
+        M[:,1] .= cumul_integrate(t, M[:,2], TrapezoidalFast())
+        α[idx], β[idx], γ[idx], fp[idx] = M \ Ct[idx,:]
+    end
+    T  = @. γ / (α * fp)
+    sqrt_component = @. imaginary_to_zero(sqrt(complex(β^2 - 4*α)))
+    Tp = @. (β - sqrt_component) / (2 * α)
+    Te = @. (β + sqrt_component) / (2 * α)
+    @. T = nan_to_zero(T)
+    @. Te = nan_to_zero(Te)
+    @. Tp = nan_to_zero(Tp)
+    vp = @. fp * Tp
+    ve = @. fp * (T - Tp)
+    ps = @. ve / Te
+    @. ps = nan_to_zero(ps)
+    return(estimates=(fp=fp, ps=ps, ve=ve, vp=vp, T=T, Te=Te, Tp=Tp), dummy=0)
+end
+
+function imaginary_to_zero(x)
+    return imag(x) == 0 ? real(x) : 0
+end
+
+function fit_filtration_nls(; t::AbstractVector, ca::AbstractVector, Ct::AbstractArray, mask=true)
+    @assert length(t) == length(ca) == size(Ct)[end]
+    num_timepoints = length(t)
+    if typeof(Ct) <: AbstractVector
+        @assert length(Ct) == num_timepoints
+        Ct = reshape(Ct, 1, num_timepoints)
+    end
+    volume_size = size(Ct)[1:end-1]
+    fp, ps, vp, ve = (zeros(volume_size...) for _=1:4)
+    resolved_mask = resolve_mask_size(mask, volume_size)
+    model(x, p) = model_filtration(t=x, ca=ca, parameters=(fp=p[1], ps=p[2], ve=p[3], vp=p[4]))
+    lls_estimates = fit_filtration_lls(t=t, ca=ca, Ct=Ct).estimates
+    init_fp, init_ps, init_ve, init_vp = select(lls_estimates, (:fp, :ps, :ve, :vp))
+    for idx in eachindex(IndexCartesian(), resolved_mask)
+        if resolved_mask[idx] == false
+            continue
+        end
+        initialvalue = [init_fp[idx], init_ps[idx], init_ve[idx], init_vp[idx]]
+        fp[idx], ps[idx], ve[idx], vp[idx] = curve_fit(model, t, Ct[idx, :], initialvalue).param
+    end
+    T  = @. (vp + ve) / fp
+    Tp = @. vp / fp
+    Te = @. ve / ps
+    @. T[fp == 0] = 0
+    @. Tp[fp == 0] = 0
+    @. Te[ps == 0] = 0
+    return(estimates=(fp=fp, ps=ps, ve=ve, vp=vp, T=T, Tp=Tp, Te=Te), dummy=0)
+end
+
+function model_uptake(; t::AbstractVector, parameters::NamedTuple, ca::AbstractVector)
+    @extract (fp, ps, vp) parameters
+    Tp = vp / (fp + ps)
+    E = ps / (fp + ps)
+    ca_conv_1 = zeros(length(t))
+    for idx in 2:length(ca)
+        ca_conv_1[idx] = ca_conv_1[idx-1] + (t[idx]-t[idx-1]) * ca[idx]
+    end
+    Ct = fp .* ((1-E) .* expconv(ca, 1/Tp, t) .+ E .* ca_conv_1)
+    return Ct
+end
+
+function fit_uptake_lls(; t::AbstractVector, ca::AbstractVector, Ct::AbstractArray, mask=true)
+    @assert length(t) == length(ca) == size(Ct)[end]
+    num_timepoints = length(t)
+    if typeof(Ct) <: AbstractVector
+        @assert length(Ct) == num_timepoints
+        Ct = reshape(Ct, 1, num_timepoints)
+    end
+    volume_size = size(Ct)[1:end-1]
+    x1, fp, x3, ps, vp = (zeros(volume_size...) for _=1:5)
+    resolved_mask = resolve_mask_size(mask, volume_size)
+
+    M = zeros(num_timepoints, 3)
+    M[:,2] = cumul_integrate(t, ca, TrapezoidalFast())
+    M[:,3] = cumul_integrate(t, M[:,2], TrapezoidalFast())
+    for idx in eachindex(IndexCartesian(), resolved_mask)
+        if resolved_mask[idx] == false
+            continue
+        end
+        M[:, 1] = -cumul_integrate(t, Ct[idx,:], TrapezoidalFast())
+        (x1[idx], fp[idx], x3[idx]) = M \ Ct[idx,:]
+    end
+    denum = @. x1 * fp - x3
+    @. ps = fp * x3 / denum
+    @. vp = fp^2 / denum
+    @. ps[denum == 0] = 0
+    @. vp[denum == 0] = 0
+    return(estimates=(fp=fp, ps=ps, vp=vp), dummy=0)
+end
+
+function fit_uptake_nls(; t::AbstractVector, ca::AbstractVector, Ct::AbstractArray, mask=true)
+    @assert length(t) == length(ca) == size(Ct)[end]
+    num_timepoints = length(t)
+    if typeof(Ct) <: AbstractVector
+        @assert length(Ct) == num_timepoints
+        Ct = reshape(Ct, 1, num_timepoints)
+    end
+    volume_size = size(Ct)[1:end-1]
+    fp, ps, vp = (zeros(volume_size...) for _=1:3)
+    resolved_mask = resolve_mask_size(mask, volume_size)
+    model(x, p) = model_uptake(t=x, ca=ca, parameters=(fp=p[1], ps=p[2], vp=p[3]))
+    lls_estimates = fit_uptake_lls(t=t, ca=ca, Ct=Ct).estimates
+    init_fp, init_ps, init_vp = select(lls_estimates, (:fp, :ps, :vp))
+    for idx in eachindex(IndexCartesian(), resolved_mask)
+        if resolved_mask[idx] == false
+            continue
+        end
+        initialvalue = [init_fp[idx], init_ps[idx], init_vp[idx]]
+        (fp[idx], ps[idx], vp[idx]) = curve_fit(model, t, Ct[idx, :], initialvalue).param
+    end
+    return(estimates=(fp=fp, ps=ps, vp=vp), dummy=0)
 end
 
 function fit_tofts_nls(; t::AbstractVector, Cp::AbstractVector, Ct::AbstractArray, mask=true)
@@ -86,16 +291,6 @@ function fit_tofts_lls(; t::AbstractVector, Cp::AbstractVector, Ct::AbstractArra
         (ktrans[idx], kep[idx]) = M \ Ct[idx,:]
     end
     return(estimates=(ktrans=ktrans, kep=kep), dummy=0)
-end
-
-function fit_extendedtofts(; method=:lls, kwargs...)
-    if method == :lls
-        return fit_extendedtofts_lls(; kwargs...)
-    elseif method == :nls
-        return fit_extendedtofts_nls(; kwargs...)
-    else
-        error("Unsupported method: $(method)")
-    end
 end
 
 function fit_extendedtofts_lls(;t::AbstractVector, Cp::AbstractVector, Ct::AbstractArray, mask=true)
@@ -145,3 +340,40 @@ function fit_extendedtofts_nls(; t::AbstractVector, Cp::AbstractVector, Ct::Abst
     end
     return(estimates=(ktrans=ktrans, kep=kep, vp=vp), dummy=0)
 end
+
+function resolve_mask_size(mask, desired_size)
+    if size(mask) == desired_size
+        return mask .> 0
+    elseif size(mask) == ()
+        return repeat([mask .> 0], desired_size...)
+    else
+        error("Mask size: $(size(mask)) does not match input size $(desired_size)")
+    end
+end
+
+function fit_model(modelname, fitmethod=:nls; kwargs...)
+    return model_dict[modelname][fitmethod](; kwargs...)
+end
+
+const model_dict = Dict{Symbol, Dict{Symbol, Function}}(
+    :tofts => Dict{Symbol, Function}(
+        :lls => fit_tofts_lls,
+        :nls => fit_tofts_nls
+    ),
+    :extendedtofts => Dict{Symbol, Function}(
+        :lls => fit_extendedtofts_lls,
+        :nls => fit_extendedtofts_nls
+    ),
+    :uptake => Dict{Symbol, Function}(
+        :lls => fit_uptake_lls,
+        :nls => fit_uptake_nls
+    ),
+    :exchange => Dict{Symbol, Function}(
+        :lls => fit_exchange_lls,
+        :nls => fit_exchange_nls
+    ),
+    :filtration => Dict{Symbol, Function}(
+        :lls => fit_filtration_lls,
+        :nls => fit_filtration_nls
+    )
+)
