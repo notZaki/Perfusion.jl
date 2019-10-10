@@ -24,6 +24,15 @@ using UnicodePlots
     end
 end
 
+function is_all_nan(x::NamedTuple)
+    for val in x
+        if any(@. !isnan(val))
+            return false
+        end
+    end
+    return true
+end
+
 @testset "Tofts model" begin
     t = collect(1:600) ./ 60
     cp = aif_parker(t .- 1)
@@ -39,10 +48,8 @@ end
     @test round(estimates.kt[1], digits=3) == test_params.kt
     @test round(estimates.kep[1], digits=3) == test_params.kep
 
-    @test fit_model(:tofts, :lls, t=t, cp=cp, ct=ct, mask=false).estimates ==
-        (kt=[0.0], kep=[0.0])
-    @test fit_model(:tofts, t=t, cp=cp, ct=ct, mask=false).estimates ==
-        (kt=[0.0], kep=[0.0])
+    @test is_all_nan(fit_model(:tofts, :lls, t=t, cp=cp, ct=ct, mask=false).estimates)
+    @test is_all_nan(fit_model(:tofts, :nls, t=t, cp=cp, ct=ct, mask=[false]).estimates)
     @test_throws ErrorException fit_model(:tofts, t=t, cp=cp, ct=ct, mask=[true, true])
 end
 
@@ -63,10 +70,8 @@ end
     @test round(estimates.kep[1], digits=3) == test_params.kep
     @test round(estimates.vp[1], digits=3) == test_params.vp
 
-    @test fit_model(:extendedtofts, :lls, t=t, cp=cp, ct=ct, mask=false).estimates ==
-        (kt=[0.0], kep=[0.0], vp=[0.0])
-    @test fit_model(:extendedtofts, :nls, t=t, cp=cp, ct=ct, mask=false).estimates ==
-        (kt=[0.0], kep=[0.0], vp=[0.0])
+    @test is_all_nan(fit_model(:extendedtofts, :lls, t=t, cp=cp, ct=ct, mask=false).estimates)
+    @test is_all_nan(fit_model(:extendedtofts, :nls, t=t, cp=cp, ct=ct, mask=[false]).estimates)
     @test_throws ErrorException fit_model(:extendedtofts, t=t, cp=cp, ct=ct, mask=[true, true])
 end
 
@@ -87,10 +92,8 @@ end
     @test round(estimates.ps[1], digits=3) == test_params.ps
     @test round(estimates.vp[1], digits=3) == test_params.vp
 
-    @test fit_model(:uptake, :lls, t=t, ca=ca, ct=ct, mask=false).estimates ==
-        (fp=[0.0], ps=[0.0], vp=[0.0])
-    @test fit_model(:uptake, :nls, t=t, ca=ca, ct=ct, mask=[false]).estimates ==
-        (fp=[0.0], ps=[0.0], vp=[0.0])
+    @test is_all_nan(fit_model(:uptake, :lls, t=t, ca=ca, ct=ct, mask=false).estimates)
+    @test is_all_nan(fit_model(:uptake, :nls, t=t, ca=ca, ct=ct, mask=[false]).estimates)
     @test_throws ErrorException fit_model(:uptake, t=t, ca=ca, ct=ct, mask=[true, true])
 end
 
@@ -113,8 +116,8 @@ end
     @test round(estimates.ve[1], digits=3) == test_params.ve
     @test round(estimates.vp[1], digits=3) == test_params.vp
 
-    @test iszero(maximum(fit_model(:exchange, :lls, t=t, ca=ca, ct=ct, mask=false).estimates))
-    @test iszero(maximum(fit_model(:exchange, :nls, t=t, ca=ca, ct=ct, mask=[false]).estimates))
+    @test is_all_nan(fit_model(:exchange, :lls, t=t, ca=ca, ct=ct, mask=false).estimates)
+    @test is_all_nan(fit_model(:exchange, :nls, t=t, ca=ca, ct=ct, mask=[false]).estimates)
     @test_throws ErrorException fit_model(:exchange, t=t, ca=ca, ct=ct, mask=[true, true])
 
     fp, ps, vp, ve = (0.75, 0.05, 0.25, 0.10)
@@ -144,8 +147,8 @@ end
     @test round(estimates.ve[1], digits=3) == test_params.ve
     @test round(estimates.vp[1], digits=3) == test_params.vp
 
-    @test iszero(maximum(fit_model(:filtration, :lls, t=t, ca=ca, ct=ct, mask=false).estimates))
-    @test iszero(maximum(fit_model(:filtration, :nls, t=t, ca=ca, ct=ct, mask=[false]).estimates))
+    @test is_all_nan(fit_model(:filtration, :lls, t=t, ca=ca, ct=ct, mask=false).estimates)
+    @test is_all_nan(fit_model(:filtration, :nls, t=t, ca=ca, ct=ct, mask=[false]).estimates)
     @test_throws ErrorException fit_model(:filtration, t=t, ca=ca, ct=ct, mask=[true, true])
 
     fp, ps, vp, ve = (0.75, 0.05, 0.25, 0.10)

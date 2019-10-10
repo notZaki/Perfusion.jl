@@ -50,7 +50,7 @@ function fit_exchange_lls(; t::AbstractVector, ca::AbstractVector, ct::AbstractA
         ct = reshape(ct, 1, num_timepoints)
     end
     volume_size = size(ct)[1:end-1]
-    α, β, γ, fp = (zeros(volume_size...) for _=1:4)
+    α, β, γ, fp = (fill(NaN, volume_size...) for _=1:4)
     resolved_mask = resolve_mask_size(mask, volume_size)
 
     M = zeros(num_timepoints, 4)
@@ -67,18 +67,10 @@ function fit_exchange_lls(; t::AbstractVector, ca::AbstractVector, ct::AbstractA
     T  = @. γ / (α * fp)
     Te = @. (β / α) - T
     Tp = @. 1 / (α * Te)
-    @. T = nan_to_zero(T)
-    @. Te = nan_to_zero(Te)
-    @. Tp = nan_to_zero(Tp)
     vp = @. fp * Tp
     ve = @. fp * (T - Tp)
     ps = @. ve / Te
-    @. ps = nan_to_zero(ps)
     return(estimates=(fp=fp, ps=ps, ve=ve, vp=vp, T=T, Te=Te, Tp=Tp), dummy=0)
-end
-
-function nan_to_zero(x)
-    return isnan(x) ? 0 : x
 end
 
 function fit_exchange_nls(; t::AbstractVector, ca::AbstractVector, ct::AbstractArray, mask=true)
@@ -89,7 +81,7 @@ function fit_exchange_nls(; t::AbstractVector, ca::AbstractVector, ct::AbstractA
         ct = reshape(ct, 1, num_timepoints)
     end
     volume_size = size(ct)[1:end-1]
-    fp, ps, vp, ve = (zeros(volume_size...) for _=1:4)
+    fp, ps, vp, ve = (fill(NaN, volume_size...) for _=1:4)
     resolved_mask = resolve_mask_size(mask, volume_size)
     model(x, p) = model_exchange(t=x, ca=ca, parameters=(fp=p[1], ps=p[2], ve=p[3], vp=p[4]))
     lls_estimates = fit_exchange_lls(t=t, ca=ca, ct=ct).estimates
@@ -104,9 +96,6 @@ function fit_exchange_nls(; t::AbstractVector, ca::AbstractVector, ct::AbstractA
     T  = @. (vp + ve) / fp
     Tp = @. vp / fp
     Te = @. ve / ps
-    @. T[fp == 0] = 0
-    @. Tp[fp == 0] = 0
-    @. Te[ps == 0] = 0
     return(estimates=(fp=fp, ps=ps, ve=ve, vp=vp, T=T, Tp=Tp, Te=Te), dummy=0)
 end
 
@@ -135,7 +124,7 @@ function fit_filtration_lls(; t::AbstractVector, ca::AbstractVector, ct::Abstrac
         ct = reshape(ct, 1, num_timepoints)
     end
     volume_size = size(ct)[1:end-1]
-    α, β, γ, fp = (zeros(volume_size...) for _=1:4)
+    α, β, γ, fp = (fill(NaN, volume_size...) for _=1:4)
     resolved_mask = resolve_mask_size(mask, volume_size)
 
     M = zeros(num_timepoints, 4)
@@ -153,13 +142,9 @@ function fit_filtration_lls(; t::AbstractVector, ca::AbstractVector, ct::Abstrac
     sqrt_component = @. imaginary_to_zero(sqrt(complex(β^2 - 4*α)))
     Tp = @. (β - sqrt_component) / (2 * α)
     Te = @. (β + sqrt_component) / (2 * α)
-    @. T = nan_to_zero(T)
-    @. Te = nan_to_zero(Te)
-    @. Tp = nan_to_zero(Tp)
     vp = @. fp * Tp
     ve = @. fp * (T - Tp)
     ps = @. ve / Te
-    @. ps = nan_to_zero(ps)
     return(estimates=(fp=fp, ps=ps, ve=ve, vp=vp, T=T, Te=Te, Tp=Tp), dummy=0)
 end
 
@@ -175,7 +160,7 @@ function fit_filtration_nls(; t::AbstractVector, ca::AbstractVector, ct::Abstrac
         ct = reshape(ct, 1, num_timepoints)
     end
     volume_size = size(ct)[1:end-1]
-    fp, ps, vp, ve = (zeros(volume_size...) for _=1:4)
+    fp, ps, vp, ve = (fill(NaN, volume_size...) for _=1:4)
     resolved_mask = resolve_mask_size(mask, volume_size)
     model(x, p) = model_filtration(t=x, ca=ca, parameters=(fp=p[1], ps=p[2], ve=p[3], vp=p[4]))
     lls_estimates = fit_filtration_lls(t=t, ca=ca, ct=ct).estimates
@@ -216,7 +201,7 @@ function fit_uptake_lls(; t::AbstractVector, ca::AbstractVector, ct::AbstractArr
         ct = reshape(ct, 1, num_timepoints)
     end
     volume_size = size(ct)[1:end-1]
-    x1, fp, x3, ps, vp = (zeros(volume_size...) for _=1:5)
+    x1, fp, x3, ps, vp = (fill(NaN, volume_size...) for _=1:5)
     resolved_mask = resolve_mask_size(mask, volume_size)
 
     M = zeros(num_timepoints, 3)
@@ -245,7 +230,7 @@ function fit_uptake_nls(; t::AbstractVector, ca::AbstractVector, ct::AbstractArr
         ct = reshape(ct, 1, num_timepoints)
     end
     volume_size = size(ct)[1:end-1]
-    fp, ps, vp = (zeros(volume_size...) for _=1:3)
+    fp, ps, vp = (fill(NaN, volume_size...) for _=1:3)
     resolved_mask = resolve_mask_size(mask, volume_size)
     model(x, p) = model_uptake(t=x, ca=ca, parameters=(fp=p[1], ps=p[2], vp=p[3]))
     lls_estimates = fit_uptake_lls(t=t, ca=ca, ct=ct).estimates
@@ -268,7 +253,7 @@ function fit_tofts_nls(; t::AbstractVector, cp::AbstractVector, ct::AbstractArra
         ct = reshape(ct, 1, num_timepoints)
     end
     volume_size = size(ct)[1:end-1]
-    kt, kep = (zeros(volume_size...) for _=1:2)
+    kt, kep = (fill(NaN, volume_size...) for _=1:2)
     resolved_mask = resolve_mask_size(mask, volume_size)
 
     model(x, p) = model_tofts(t=x, cp=cp, parameters=(kt=p[1], kep=p[2]))
@@ -290,7 +275,7 @@ function fit_tofts_lls(; t::AbstractVector, cp::AbstractVector, ct::AbstractArra
         ct = reshape(ct, 1, num_timepoints)
     end
     volume_size = size(ct)[1:end-1]
-    kt, kep = (zeros(volume_size...) for _=1:2)
+    kt, kep = (fill(NaN, volume_size...) for _=1:2)
     resolved_mask = resolve_mask_size(mask, volume_size)
 
     M = zeros(num_timepoints, 2)
@@ -313,7 +298,7 @@ function fit_extendedtofts_lls(;t::AbstractVector, cp::AbstractVector, ct::Abstr
         ct = reshape(ct, 1, num_timepoints)
     end
     volume_size = size(ct)[1:end-1]
-    kt, kep, vp = (zeros(volume_size...) for _=1:3)
+    kt, kep, vp = (fill(NaN, volume_size...) for _=1:3)
     resolved_mask = resolve_mask_size(mask, volume_size)
 
     M = zeros(num_timepoints, 3)
@@ -339,7 +324,7 @@ function fit_extendedtofts_nls(; t::AbstractVector, cp::AbstractVector, ct::Abst
         ct = reshape(ct, 1, num_timepoints)
     end
     volume_size = size(ct)[1:end-1]
-    kt, kep, vp = (zeros(volume_size...) for _=1:3)
+    kt, kep, vp = (fill(NaN, volume_size...) for _=1:3)
     resolved_mask = resolve_mask_size(mask, volume_size)
 
     model(x, p) = model_tofts(t=x, cp=cp, parameters=(kt=p[1], kep=p[2], vp=p[3]))
