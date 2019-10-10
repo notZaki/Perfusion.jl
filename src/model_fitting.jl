@@ -138,18 +138,15 @@ function fit_filtration_lls(; t::AbstractVector, ca::AbstractVector, ct::Abstrac
         M[:,1] .= cumul_integrate(t, M[:,2], TrapezoidalFast())
         α[idx], β[idx], γ[idx], fp[idx] = M \ ct[idx,:]
     end
+    root_term = @. β^2 - 4 * α
+    @. root_term[root_term < 0] = 0
+    Tp = @. (β - sqrt(root_term)) / (2 * α)
+    Te = @. (β + sqrt(root_term)) / (2 * α)
     T  = @. γ / (α * fp)
-    sqrt_component = @. imaginary_to_zero(sqrt(complex(β^2 - 4*α)))
-    Tp = @. (β - sqrt_component) / (2 * α)
-    Te = @. (β + sqrt_component) / (2 * α)
     vp = @. fp * Tp
     ve = @. fp * (T - Tp)
     ps = @. ve / Te
     return(estimates=(fp=fp, ps=ps, ve=ve, vp=vp, T=T, Te=Te, Tp=Tp), dummy=0)
-end
-
-function imaginary_to_zero(x)
-    return imag(x) == 0 ? real(x) : 0
 end
 
 function fit_filtration_nls(; t::AbstractVector, ca::AbstractVector, ct::AbstractArray, mask=true)
