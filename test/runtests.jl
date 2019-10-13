@@ -158,3 +158,48 @@ end
     ct_b = model_filtration(t=t, ca=ca, parameters=params_b)
     @test ct_a ≈ ct_b
 end
+
+@testset "Reference region models" begin
+    t = collect(1:600) ./ 60
+    cp = aif_georgiou(t .- 1)
+
+    test_params = (kt = 0.25, kep = 0.5)
+    ct = model_tofts(t=t, cp=cp, parameters=test_params)
+    ref_params = (kt = 0.14, kep = 1.0)
+    crr = model_tofts(t=t, cp=cp, parameters=ref_params)
+
+    rel_kt = test_params.kt / ref_params.kt
+    rel_ve = (test_params.kt / test_params.kep) / (ref_params.kt / ref_params.kep)
+    rel_kt = round(rel_kt, digits=3)
+    rel_ve = round(rel_ve, digits=3)
+
+    estimates = fit_model(:referenceregion, :lls, t=t, crr=crr, ct=ct, mask=[true]).estimates
+    @test round(estimates.rel_kt[1], digits=3) == rel_kt
+    @test round(estimates.rel_ve[1], digits=3) == rel_ve
+    @test round(estimates.kep[1], digits=3) == test_params.kep
+    @test round(estimates.kep_rr[1], digits=3) == ref_params.kep
+
+    estimates = fit_model(:referenceregion, :nls, t=t, crr=crr, ct=ct).estimates
+    @test round(estimates.rel_kt[1], digits=3) == rel_kt
+    @test round(estimates.rel_ve[1], digits=3) == rel_ve
+    @test round(estimates.kep[1], digits=3) == test_params.kep
+    @test round(estimates.kep_rr[1], digits=3) == ref_params.kep
+
+    estimates = fit_model(:constrained_referenceregion, :lls, t=t, crr=crr, ct=ct, mask=[true]).estimates
+    @test round(estimates.rel_kt[1], digits=3) == rel_kt
+    @test round(estimates.rel_ve[1], digits=3) == rel_ve
+    @test round(estimates.kep[1], digits=3) == test_params.kep
+    @test round(estimates.kep_rr[1], digits=3) == ref_params.kep
+
+    estimates = fit_model(:constrained_referenceregion, :nls, t=t, crr=crr, ct=ct).estimates
+    @test round(estimates.rel_kt[1], digits=3) == rel_kt
+    @test round(estimates.rel_ve[1], digits=3) == rel_ve
+    @test round(estimates.kep[1], digits=3) == test_params.kep
+    @test round(estimates.kep_rr[1], digits=3) == ref_params.kep
+
+    @test is_all_nan(fit_model(:referenceregion, :lls, t=t, crr=crr, ct=ct, mask=false).estimates)
+    @test is_all_nan(fit_model(:referenceregion, :nls, t=t, crr=crr, ct=ct, mask=[false]).estimates)
+    @test is_all_nan(fit_model(:constrained_referenceregion, :lls, t=t, crr=crr, ct=ct, mask=[false]).estimates)
+    @test is_all_nan(fit_model(:constrained_referenceregion, :nls, t=t, crr=crr, ct=ct, mask=false).estimates)
+    @test_throws ErrorException fit_model(:referenceregion, t=t, crr=crr, ct=ct, mask=[true, true])
+end
