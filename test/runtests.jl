@@ -1,4 +1,5 @@
 using Perfusion
+using Statistics
 using Test
 using UnicodePlots
 
@@ -157,4 +158,76 @@ end
     ct_a = model_filtration(t=t, ca=ca, parameters=params_a)
     ct_b = model_filtration(t=t, ca=ca, parameters=params_b)
     @test ct_a ≈ ct_b
+end
+
+@testset "Reference region models" begin
+    t = collect(1:600) ./ 60
+    cp = aif_georgiou(t .- 1)
+
+    test_params = (kt = 0.25, kep = 0.5)
+    ct = model_tofts(t=t, cp=cp, parameters=test_params)
+    ref_params = (kt = 0.14, kep = 1.0)
+    crr = model_tofts(t=t, cp=cp, parameters=ref_params)
+
+    rel_kt = test_params.kt / ref_params.kt
+    rel_ve = (test_params.kt / test_params.kep) / (ref_params.kt / ref_params.kep)
+    rel_kt = round(rel_kt, digits=3)
+    rel_ve = round(rel_ve, digits=3)
+
+    estimates = fit_model(:referenceregion, :lls, t=t, crr=crr, ct=ct, mask=[true]).estimates
+    @test round(estimates.rel_kt[1], digits=3) == rel_kt
+    @test round(estimates.rel_ve[1], digits=3) == rel_ve
+    @test round(estimates.kep[1], digits=3) == test_params.kep
+    @test round(estimates.kep_rr[1], digits=3) == ref_params.kep
+
+    estimates = fit_model(:referenceregion, :nls, t=t, crr=crr, ct=ct).estimates
+    @test round(estimates.rel_kt[1], digits=3) == rel_kt
+    @test round(estimates.rel_ve[1], digits=3) == rel_ve
+    @test round(estimates.kep[1], digits=3) == test_params.kep
+    @test round(estimates.kep_rr[1], digits=3) == ref_params.kep
+
+    estimates = fit_model(:constrained_referenceregion, :lls, t=t, crr=crr, ct=ct, mask=[true]).estimates
+    @test round(estimates.rel_kt[1], digits=3) == rel_kt
+    @test round(estimates.rel_ve[1], digits=3) == rel_ve
+    @test round(estimates.kep[1], digits=3) == test_params.kep
+    @test round(estimates.kep_rr[1], digits=3) == ref_params.kep
+
+    estimates = fit_model(:constrained_referenceregion, :nls, t=t, crr=crr, ct=ct).estimates
+    @test round(estimates.rel_kt[1], digits=3) == rel_kt
+    @test round(estimates.rel_ve[1], digits=3) == rel_ve
+    @test round(estimates.kep[1], digits=3) == test_params.kep
+    @test round(estimates.kep_rr[1], digits=3) == ref_params.kep
+
+    @test is_all_nan(fit_model(:referenceregion, :lls, t=t, crr=crr, ct=ct, mask=false).estimates)
+    @test is_all_nan(fit_model(:referenceregion, :nls, t=t, crr=crr, ct=ct, mask=[false]).estimates)
+    @test is_all_nan(fit_model(:constrained_referenceregion, :lls, t=t, crr=crr, ct=ct, mask=[false]).estimates)
+    @test is_all_nan(fit_model(:constrained_referenceregion, :nls, t=t, crr=crr, ct=ct, mask=false).estimates)
+    @test_throws ErrorException fit_model(:referenceregion, t=t, crr=crr, ct=ct, mask=[true, true])
+
+    # With noise
+    num_noisy_replications = 100
+    σ = 0.1
+    noisy_ct = zeros(num_noisy_replications, length(t))
+    for idx = 1:num_noisy_replications
+        noisy_ct[idx, :] .= ct .+ σ .* randn(length(ct))
+    end
+
+    rel_kt = round(rel_kt, digits=1)
+    rel_ve = round(rel_ve, digits=1)
+
+    estimates = fit_model(:referenceregion, :lls, t=t, crr=crr, ct=noisy_ct).estimates
+    @test round(mean(estimates.rel_kt), digits=1) == rel_kt
+    @test round(mean(estimates.rel_ve), digits=1) == rel_ve
+    @test round(mean(estimates.kep), digits=1) == test_params.kep
+    @test round(mean(estimates.kep_rr), digits=1) == ref_params.kep
+
+    estimates_constrained = fit_model(:constrained_referenceregion, :lls, t=t, crr=crr, ct=noisy_ct).estimates
+    @test round(mean(estimates_constrained.rel_kt), digits=1) == rel_kt
+    @test round(mean(estimates_constrained.rel_ve), digits=1) == rel_ve
+    @test round(mean(estimates_constrained.kep), digits=1) == test_params.kep
+    @test round(mean(estimates_constrained.kep_rr), digits=1) == ref_params.kep
+    # Constrained estimates should have better precision/variability than unconstrained
+    @test std(estimates_constrained.rel_kt) < std(estimates.rel_kt)
+    @test std(estimates_constrained.rel_ve) < std(estimates.rel_ve)
+    @test std(estimates_constrained.kep) < std(estimates.kep)
 end
