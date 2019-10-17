@@ -6,6 +6,12 @@ macro extract(varnames, namedtuple)
     ex
 end
 
+using LinearAlgebra: norm
+using LsqFit
+using Statistics: mean
+include("relaxation.jl")
+export spgr, fit_relaxation
+
 using SpecialFunctions: gamma
 include("aif.jl")
 export aif_biexponential, aif_fritzhansen, aif_weinmann

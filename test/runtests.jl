@@ -3,6 +3,15 @@ using Statistics
 using Test
 using UnicodePlots
 
+function is_all_nan(x::NamedTuple)
+    for val in x
+        if any(@. !isnan(val))
+            return false
+        end
+    end
+    return true
+end
+
 @testset "AIFs" begin
     scan_timepoints = collect(1:600) ./ 60
     aif_timepoints = scan_timepoints .- 1.0 # Define bolus arrival at 1 minute
@@ -25,13 +34,27 @@ using UnicodePlots
     end
 end
 
-function is_all_nan(x::NamedTuple)
-    for val in x
-        if any(@. !isnan(val))
-            return false
-        end
-    end
-    return true
+@testset "T1 fitting" begin
+    T1 = 2500
+    R1 = 1/T1
+    M0 = 10_000
+    α = [5, 10, 15, 20, 25, 30]
+    TR = 5
+
+    signal = spgr(M0=M0, R1=R1, angle=α, TR=TR)
+
+    despot = fit_relaxation(:despot, signal=signal, angles=α, TR=TR)
+    novifast = fit_relaxation(:novifast, signal=signal, angles=α, TR=TR)
+    nls = fit_relaxation(:nls, signal=signal, angles=α, TR=TR)
+
+    @test round(despot.estimates.M0[1], digits=3) == M0
+    @test round(despot.estimates.T1[1], digits=3) == T1
+
+    @test round(novifast.estimates.M0[1], digits=3) == M0
+    @test round(novifast.estimates.T1[1], digits=3) == T1
+
+    @test round(nls.estimates.M0[1], digits=3) == M0
+    @test round(nls.estimates.T1[1], digits=3) == T1
 end
 
 @testset "Tofts model" begin
