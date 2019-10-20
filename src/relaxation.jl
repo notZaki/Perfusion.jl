@@ -12,16 +12,16 @@ function spgr(; M0, angle, TR, R1, R2star=0.0, TE=0.0)
     return @. M0 * sin(angle) * exp(-R2star*TE) * (1-exp(-R1*TR)) / (1-cos(angle)*exp(-R1*TR))
 end
 
-function conc_to_R1(Ct; r1, R10)
+function concentration_to_R1(Ct; r1, R10)
     return @. R10 + r1 * Ct
 end
 
-function R1_to_conc(R1; R10, r1)
+function R1_to_concentration(R1; R10, r1)
     return @. (R1 - R10) / r1
 end
 
-function R1_to_signal(R1; S0, α, TR)
-    return spgr(S0=S0, α=α, TR=TR, R1=R1)
+function R1_to_signal(R1; M0, α, TR)
+    return spgr(M0=M0, angle=α, TR=TR, R1=R1)
 end
 
 function signal_to_R1(S; R10, α, TR, BAF::Int=1)
@@ -32,20 +32,25 @@ function signal_to_R1(S; R10, α, TR, BAF::Int=1)
     for t=1:sT, k=1:sZ, j=1:sY, i=1:sX
         E1 = exp(-TR*R10[i,j,k])
         s = S[i,j,k,t] / S_pre[i,j,k]
-        R1[i,j,k,t] = -(1/TR) * real(log( complex((1-s+s*E1-cosα*E1)/(1-s*cosα+s*E1*cosα-E1*cosα)) ))
+        log_term = (1-s+s*E1-cosα*E1) / (1-s*cosα+s*E1*cosα-E1*cosα)
+        if log_term > 0
+            R10[i,j,k,t] = (-1/TR) * log(log_term)
+        else
+            R10[i,j,k,t] = NaN
+        end
     end
     return R1
 end
 
-function conc_to_signal(Ct; r1, S0, α, TR, R10)
-    R1 = conc_to_R1(Ct; r1=r1, R10 = R10)
-    signal = R1_to_signal(R1; S0=S0, α=α, TR=TR)
+function concentration_to_signal(Ct; r1, M0, α, TR, R10)
+    R1 = concentration_to_R1(Ct; r1=r1, R10 = R10)
+    signal = R1_to_signal(R1; M0=M0, α=α, TR=TR)
     return signal
 end
 
-function signal_to_conc(S; R10, α, TR, r1, BAF::Int=1)
+function signal_to_concentration(S; R10, α, TR, r1, BAF::Int=1)
     R1 = signal_to_R1(S; R10=R10, α=α, TR=TR, BAF=BAF)
-    Ct = R1_to_conc(R1; R10=R10, r1=r1)
+    Ct = R1_to_concentration(R1; R10=R10, r1=r1)
     return Ct
 end
 
