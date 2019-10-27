@@ -455,26 +455,6 @@ function fit_constrained_referenceregion_lls(; t::AbstractVector, crr::AbstractV
     return(estimates=(rel_kt=rel_kt, rel_ve=rel_ve, kep=kep, kep_rr=kep_rr), dummy=0)
 end
 
-function positive_only_mask(x::NamedTuple)
-    valid_keys = keys(x)
-    mask = trues(size(x[valid_keys[1]]))
-    for array in x
-        @. mask = mask & (array > 0)
-    end
-    return mask
-end
-
-function interquartile_mean(x::AbstractVector)
-    if std(x)>1e-3
-        quartiles = quantile(x, [0.25, 0.75])
-        # `<=` is safer than `<` because latter can creat empty array if x is short
-        interquartile_x = @. x[quartiles[1] <= x <= quartiles[2]]
-    else
-        interquartile_x = x
-    end
-    return mean(interquartile_x)
-end
-
 function fit_model(modelname, fitmethod=:nls; kwargs...)
     return model_dict[modelname][fitmethod](; kwargs...)
 end

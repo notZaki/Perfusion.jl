@@ -1,13 +1,3 @@
-function resolve_mask_size(mask, desired_size)
-    if size(mask) == desired_size
-        return mask .> 0
-    elseif size(mask) == ()
-        return repeat([mask .> 0], desired_size...)
-    else
-        error("Mask size: $(size(mask)) does not match input size $(desired_size)")
-    end
-end
-
 function spgr(; M0, angle, TR, R1, R2star=0.0, TE=0.0)
     return @. M0 * sin(angle) * exp(-R2star*TE) * (1-exp(-R1*TR)) / (1-cos(angle)*exp(-R1*TR))
 end

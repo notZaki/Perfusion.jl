@@ -1,10 +1,7 @@
 module Perfusion
 
-macro extract(varnames, namedtuple)
-    ex = Expr(:block)
-    ex.args = [:($(esc(var)) = getindex($(esc(namedtuple)), $(esc(QuoteNode(var))))) for var in varnames.args]
-    ex
-end
+include("utils.jl")
+export extract, interquartile_mean, percent_error
 
 using LinearAlgebra: norm
 using LsqFit
