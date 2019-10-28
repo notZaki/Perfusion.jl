@@ -57,20 +57,6 @@ end
     @test round(nls.estimates.T1[1], digits=3) == T1
 end
 
-@testset "Signal to Concentration" begin
-    t = collect(1:600) ./ 60
-    cp = aif_georgiou(t .- 1)
-    test_params = (kt = 0.25, kep = 0.5)
-
-    ct = model_tofts(t=t, cp=cp, parameters=test_params)
-
-    # Concentration to signal
-    r1 = 0.45
-    R10 = 1500
-    R1 = Perfusion.concentration_to_signal(ct=ct, r1=r1, R10=R10)
-
-end
-
 @testset "Tofts model" begin
     t = collect(1:600) ./ 60
     cp = aif_parker(t .- 1)
