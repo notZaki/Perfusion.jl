@@ -14,9 +14,9 @@ function expconv(A::AbstractVector, B::Number, t::AbstractVector)
     return f ./ B
 end
 
-function model_tofts(; t::AbstractVector, parameters::NamedTuple, cp::AbstractVector)
+function model_tofts(conv::Function=expconv; t::AbstractVector, parameters::NamedTuple, cp::AbstractVector)
     @extract (kt, kep) parameters
-    ct = kt * expconv(cp, kep, t)
+    ct = kt * conv(cp, kep, t)
     if haskey(parameters, :vp)
         ct .+= parameters.vp * cp
     end
@@ -242,7 +242,7 @@ function fit_uptake_nls(; t::AbstractVector, ca::AbstractVector, ct::AbstractArr
     return(estimates=(fp=fp, ps=ps, vp=vp), dummy=0)
 end
 
-function fit_tofts_nls(; t::AbstractVector, cp::AbstractVector, ct::AbstractArray, mask=true)
+function fit_tofts_nls(conv::Function=expconv; t::AbstractVector, cp::AbstractVector, ct::AbstractArray, mask=true)
     @assert length(t) == length(cp) == size(ct)[end]
     num_timepoints = length(t)
     if typeof(ct) <: AbstractVector
@@ -253,7 +253,7 @@ function fit_tofts_nls(; t::AbstractVector, cp::AbstractVector, ct::AbstractArra
     kt, kep = (fill(NaN, volume_size...) for _=1:2)
     resolved_mask = resolve_mask_size(mask, volume_size)
 
-    model(x, p) = model_tofts(t=x, cp=cp, parameters=(kt=p[1], kep=p[2]))
+    model(x, p) = model_tofts(conv; t=x, cp=cp, parameters=(kt=p[1], kep=p[2]))
     initialvalues = [0.01, 0.01]
     for idx in eachindex(IndexCartesian(), resolved_mask)
         if resolved_mask[idx] == false
