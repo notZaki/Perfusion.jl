@@ -15,7 +15,7 @@ function interquartile_mean(x::AbstractVector)
     return mean(interquartile_x)
 end
 
-function percent_error(estimate, truth)
+function percent_error(estimate::Number, truth::Number)
     return 100 * (estimate - truth) / truth
 end
 
@@ -38,3 +38,12 @@ function resolve_mask_size(mask, desired_size)
     end
 end
 
+function unify_size(element, desired_size)
+    if size(element) == desired_size
+        return element
+    elseif size(element) == ()
+        return repeat([element], desired_size...)
+    else
+        error("Element size: $(size(element)) does not match input size $(desired_size)")
+    end
+end

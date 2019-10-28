@@ -14,32 +14,47 @@ function R1_to_signal(R1; M0, α, TR)
     return spgr(M0=M0, angle=α, TR=TR, R1=R1)
 end
 
-function signal_to_R1(S; R10, α, TR, BAF::Int=1)
-    (sX, sY, sZ, sT) = size(S)
-    R1 = zeros(sX, sY, sZ, sT)
-    S_pre = mean(S[:,:,:,1:BAF], dims=4)
-    cosα = cos(α)
-    for t=1:sT, k=1:sZ, j=1:sY, i=1:sX
-        E1 = exp(-TR*R10[i,j,k])
-        s = S[i,j,k,t] / S_pre[i,j,k]
-        log_term = (1-s+s*E1-cosα*E1) / (1-s*cosα+s*E1*cosα-E1*cosα)
-        if log_term > 0
-            R10[i,j,k,t] = (-1/TR) * log(log_term)
-        else
-            R10[i,j,k,t] = NaN
+function signal_to_R1(signal; R10, angle, TR, BAF::Int=1, mask=[true])
+    if typeof(signal) <: AbstractVector
+        signal = reshape(signal, 1, length(signal))
+        input_was_vector = true
+    else
+        input_was_vector = false
+    end
+    volume_size = size(signal)[1:end-1]
+    R1 = fill(NaN, size(signal)...)
+    resolved_R10 = unify_size(R10, volume_size)
+    resolved_mask = resolve_mask_size(mask, volume_size)
+
+    for idx in eachindex(IndexCartesian(), resolved_mask)
+        if resolved_mask[idx] == false
+            continue
         end
+        R1[idx,:] = _signal_to_R1(signal[idx,:], resolved_R10[idx], angle, TR, BAF)
+    end
+    if input_was_vector
+        R1 = R1[:]
     end
     return R1
 end
+function _signal_to_R1(signal, R10, angle, TR, BAF)
+    S_pre = mean(signal[1:BAF])
+    cosα = cos(angle)
+    E1 = exp(-TR*R10)
+    s = signal ./ S_pre
+    log_term = @. (1-s+s*E1-cosα*E1) / (1-s*cosα+s*E1*cosα-E1*cosα)
+    R1 = [val > 0 ? (-1/TR) * log(val) : NaN for val in log_term]
+    return R1
+end
 
-function concentration_to_signal(Ct; r1, M0, α, TR, R10)
-    R1 = concentration_to_R1(Ct; r1=r1, R10 = R10)
+function concentration_to_signal(Ct; r1, M0, α, TR, R10, mask=true)
+    R1 = concentration_to_R1(Ct; r1=r1, R10 = R10, mask=mask)
     signal = R1_to_signal(R1; M0=M0, α=α, TR=TR)
     return signal
 end
 
-function signal_to_concentration(S; R10, α, TR, r1, BAF::Int=1)
-    R1 = signal_to_R1(S; R10=R10, α=α, TR=TR, BAF=BAF)
+function signal_to_concentration(S; R10, angle, TR, r1, BAF::Int=1, mask=true)
+    R1 = signal_to_R1(S; R10=R10, angle=angle, TR=TR, BAF=BAF, mask=mask)
     Ct = R1_to_concentration(R1; R10=R10, r1=r1)
     return Ct
 end
