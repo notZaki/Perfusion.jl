@@ -7,8 +7,8 @@ using LinearAlgebra: norm
 using LsqFit
 using Statistics: mean
 include("relaxation.jl")
-export concentration_to_R1, concentration_to_signal, signal_to_concentration, signal_to_R1
-export fit_relaxation, spgr
+export spgr, concentration_to_R1, concentration_to_signal, signal_to_concentration, signal_to_R1
+export fit_relaxation, fit_relaxation_nls, fit_relaxation_despot, fit_relaxation_novifast 
 
 using SpecialFunctions: gamma
 include("aif.jl")

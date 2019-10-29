@@ -176,7 +176,7 @@ function fit_relaxation_nls(;
     M0, T1 = (fill(NaN, volume_size...) for _=1:2)
     resolved_mask = resolve_mask_size(mask, volume_size)
 
-    @. model(x,p) = spgr(M0=p[1], R1=1/p[2], angle=x, TR=TR)
+    @. model(x,p) = _spgr(x, p[1], 1/p[2], TR)
     for idx in eachindex(IndexCartesian(), resolved_mask)
         if resolved_mask[idx] == false
             continue
@@ -187,12 +187,16 @@ function fit_relaxation_nls(;
     return(estimates=(M0=M0, T1=T1), dummy=0)
 end
 
+function _spgr(angle, M0, R1, TR, TE=0.0, R2star=0.0)
+    return @. M0 * sin(angle) * exp(-R2star*TE) * (1-exp(-R1*TR)) / (1-cos(angle)*exp(-R1*TR))
+end
+
 const relaxation_dict = Dict{Symbol, Function}(
     :nls => fit_relaxation_nls,
     :despot => fit_relaxation_despot,
     :novifast => fit_relaxation_novifast
 )
 
-function fit_relaxation(fittype::Symbol; kwargs...)
+function fit_relaxation(fittype::Symbol=:novifast; kwargs...)
     return relaxation_dict[fittype](;kwargs...)
 end

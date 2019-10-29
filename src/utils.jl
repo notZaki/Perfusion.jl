@@ -1,3 +1,19 @@
+function expconv(A::AbstractVector, B::Number, t::AbstractVector)
+    # Returns f = A ConvolvedWith exp(-B t)
+    # Based on Flouri et al. (2016) MRM 76(3), doi: 10.1002/mrm.25991
+    @assert length(A) == length(t)
+    f = zeros(length(t))
+    for i in 2:length(t)
+        x = B * (t[i] - t[i-1])
+        dA = (A[i] - A[i-1]) / x
+        E = exp(-x)
+        E0 = 1 - E
+        E1 = x - E0
+        f[i] = E * f[i-1] + A[i-1] * E0 + dA * E1
+    end
+    return f ./ B
+end
+
 macro extract(varnames, namedtuple)
     ex = Expr(:block)
     ex.args = [:($(esc(var)) = getindex($(esc(namedtuple)), $(esc(QuoteNode(var))))) for var in varnames.args]
