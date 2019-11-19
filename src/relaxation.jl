@@ -76,7 +76,7 @@ function fit_relaxation_despot(; signal::AbstractArray, angles::AbstractVector, 
         end
         M0[idx], T1[idx] = _despot(signal[idx,:], angles, TR)
     end
-    return(estimates=(M0=M0, T1=T1), dummy=0)
+    return(estimates=(M0=M0, T1=T1), )
 end
 
 # Refs: Deoni, S. C. L., Peters, T. M., & Rutt, B. K. (2005). MRM 53(1), 237–241. https://doi.org/10.1002/mrm.20314
@@ -113,7 +113,7 @@ function fit_relaxation_novifast(; signal::AbstractArray, angles::AbstractVector
         end
         M0[idx], T1[idx] = _novifast(signal[idx,:], angles, TR)
     end
-    return(estimates=(M0=M0, T1=T1), dummy=0)
+    return(estimates=(M0=M0, T1=T1), )
 end
 
 # Refs: Ramos-Llorden, G., Vegas-Sanchez-Ferrero, G., Bjork, M., Vanhevel, F., Parizel, P. M., San Jose Estepar, R., … Sijbers, J. (2018). IEEE Transactions on Medical Imaging, 37(11), 2414–2427. https://doi.org/10.1109/TMI.2018.2833288
@@ -184,7 +184,7 @@ function fit_relaxation_nls(;
         fit = curve_fit(model, angles, signal[idx,:], [initialvalues.M0, initialvalues.T1])
         M0[idx], T1[idx] = fit.param 
     end
-    return(estimates=(M0=M0, T1=T1), dummy=0)
+    return(estimates=(M0=M0, T1=T1), )
 end
 
 function _spgr(angle, M0, R1, TR, TE=0.0, R2star=0.0)
