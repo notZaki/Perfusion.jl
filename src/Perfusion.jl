@@ -1,10 +1,14 @@
 module Perfusion
 
-macro extract(varnames, namedtuple)
-    ex = Expr(:block)
-    ex.args = [:($(esc(var)) = getindex($(esc(namedtuple)), $(esc(QuoteNode(var))))) for var in varnames.args]
-    ex
-end
+include("utils.jl")
+export extract, interquartile_mean, percent_error
+
+using LinearAlgebra: norm
+using LsqFit
+using Statistics: mean
+include("relaxation.jl")
+export spgr, concentration_to_R1, concentration_to_signal, signal_to_concentration, signal_to_R1
+export fit_relaxation, fit_relaxation_nls, fit_relaxation_despot, fit_relaxation_novifast 
 
 using SpecialFunctions: gamma
 include("aif.jl")

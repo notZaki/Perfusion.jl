@@ -1,3 +1,4 @@
+tmux*
 *.jl.*.cov
 *.jl.cov
 *.jl.mem
