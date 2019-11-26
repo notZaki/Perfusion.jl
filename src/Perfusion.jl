@@ -1,7 +1,7 @@
 module Perfusion
 
 include("utils.jl")
-export extract, interquartile_mean, percent_error
+export @extract, interquartile_mean, percent_error
 
 using LinearAlgebra: norm
 using LsqFit
