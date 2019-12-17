@@ -227,7 +227,7 @@ function fit_cerrm_lls(
     resolved_mask = resolve_mask_size(mask, volume_size)
 
     if kep_rr <= 0
-        rrm_estimates = fit_errm_lls(t = t, crr = crr, ct = ct, mask = mask)
+        rrm_estimates = fit_errm_lls(t = t, crr = crr, ct = ct, mask = mask).estimates
         viable_estimates = positive_only_mask(rrm_estimates)
         kep_rr = interquartile_mean(rrm_estimates.kep_rr[viable_estimates])
     end
