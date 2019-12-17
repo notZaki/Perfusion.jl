@@ -18,9 +18,9 @@ The `hematocrit` is used to convert the concentration in blood to plasma and has
 """
 function aif_parker(timepoints; parameters = _parker_parameters, hematocrit = 0.42)
     @extract (A, T, σ, α, β, s, τ) parameters
-    Cb = [( A[1] / (σ[1]*sqrt(2*pi)) ) * exp( -(t-T[1])^2 / (2*(σ[1])^2) ) +
-          ( A[2] / (σ[2]*sqrt(2*pi)) ) * exp( -(t-T[2])^2 / (2*(σ[2])^2) ) +
-          α * exp(-β*t) / (1. + exp( -s*(t-τ) )) for t in timepoints]
+    Cb = [(A[1] / (σ[1] * sqrt(2 * pi))) * exp(-(t - T[1])^2 / (2 * (σ[1])^2)) +
+          (A[2] / (σ[2] * sqrt(2 * pi))) * exp(-(t - T[2])^2 / (2 * (σ[2])^2)) +
+          α * exp(-β * t) / (1.0 + exp(-s * (t - τ))) for t in timepoints]
     Cb[timepoints.<=0] .= 0
     Cp = Cb ./ (1 - hematocrit)
     return Cp
@@ -31,7 +31,7 @@ const _georgiou_parameters = (
     m = [0.11, 1.17, 16.02],
     α = 5.26,
     β = 0.032,
-    τ = 0.129
+    τ = 0.129,
 )
 
 """
@@ -56,19 +56,19 @@ function aif_georgiou(timepoints; parameters = _georgiou_parameters, hematocrit 
             continue
         end
         N = fld(timepoint, τ) # `fld` might be more efficient than `floor`
-        for j=0:N
-            gammavariate_part[i] += gammavariate((j+1)*α+j, β, timepoint-j*τ)
+        for j = 0:N
+            gammavariate_part[i] += gammavariate((j + 1) * α + j, β, timepoint - j * τ)
         end
     end
     Cb = exponential_part .* gammavariate_part
     Cb[timepoints.<=0] .= 0
-    Cp = Cb ./ (1-hematocrit)
+    Cp = Cb ./ (1 - hematocrit)
     return Cp
 end
 
 function gammavariate(alpha, beta, t)::Float64
-    if t>0
-        gammavalue = (t^alpha * exp(-t/beta)) / (beta^(alpha + 1) * gamma(alpha + 1))
+    if t > 0
+        gammavalue = (t^alpha * exp(-t / beta)) / (beta^(alpha + 1) * gamma(alpha + 1))
         if !isnan(gammavalue)
             return gammavalue
         end
@@ -87,7 +87,7 @@ The default value is set to to zero, i.e. no conversion takes place.
 """
 function aif_biexponential(timepoints; parameters, hematocrit = 0)
     @extract (D, a, m) parameters
-    Cb = [D * (a[1] * exp(-m[1]*t) + a[2] * exp(-m[2]*t)) for t in timepoints]
+    Cb = [D * (a[1] * exp(-m[1] * t) + a[2] * exp(-m[2] * t)) for t in timepoints]
     Cb[timepoints.<=0] .= 0
     Cp = Cb ./ (1 - hematocrit)
     return Cp
@@ -103,11 +103,7 @@ The `timepoints` input is in minutes with the bolus arriving at 0.
 The model describes concentration in plasma, therefore a hematocrit is not necessary.
 """
 function aif_weinmann(timepoints)
-    weinmann_parameters = (
-        D = 0.1,
-        a = [3.99, 4.78],
-        m = [0.144, 0.0111]
-    )
+    weinmann_parameters = (D = 0.1, a = [3.99, 4.78], m = [0.144, 0.0111])
     return aif_biexponential(timepoints, parameters = weinmann_parameters, hematocrit = 0)
 end
 
@@ -121,12 +117,12 @@ The `timepoints` input is in minutes with the bolus arriving at 0.
 The model describes concentration in plasma, therefore a hematocrit is not necessary.
 """
 function aif_fritzhansen(timepoints; hematocrit = 0)
-    fritzhansen_parameters = (
-        D = 1.0,
-        a = [2.4, 0.62],
-        m = [3.0, 0.016]
+    fritzhansen_parameters = (D = 1.0, a = [2.4, 0.62], m = [3.0, 0.016])
+    return aif_biexponential(
+        timepoints,
+        parameters = fritzhansen_parameters,
+        hematocrit = hematocrit,
     )
-    return aif_biexponential(timepoints, parameters = fritzhansen_parameters, hematocrit = hematocrit)
 end
 
 """
@@ -138,15 +134,17 @@ The `timepoints` input is in minutes with the bolus arriving at 0.
 The model parameters from the paper will be used by default unless an optional `parameters` input is provided.
 The `hematocrit` is used to convert the concentration in blood to plasma and has default value of 0.42.
 """
-function aif_orton1(timepoints;
-    parameters = (aB = 10.4, μB = 12.0, aG =1.24, μG = 0.169),
-    hematocrit = 0.42)
+function aif_orton1(
+    timepoints;
+    parameters = (aB = 10.4, μB = 12.0, aG = 1.24, μG = 0.169),
+    hematocrit = 0.42,
+)
     @extract (aB, μB, aG, μG) parameters
-    AB = aB - aB*aG / (μB-μG)
-    AG = aB*aG / (μB-μG)
-    Cb = [AB * exp(-μB*t) + AG * exp(-μG*t) for t in timepoints]
+    AB = aB - aB * aG / (μB - μG)
+    AG = aB * aG / (μB - μG)
+    Cb = [AB * exp(-μB * t) + AG * exp(-μG * t) for t in timepoints]
     Cb[timepoints.<0] .= 0
-    Cp = Cb ./ ( 1 - hematocrit)
+    Cp = Cb ./ (1 - hematocrit)
     return Cp
 end
 
@@ -159,13 +157,15 @@ The `timepoints` input is in minutes with the bolus arriving at 0.
 The model parameters from the paper will be used by default unless an optional `parameters` input is provided.
 The `hematocrit` is used to convert the concentration in blood to plasma and has default value of 0.42.
 """
-function aif_orton2(timepoints;
+function aif_orton2(
+    timepoints;
     parameters = (aB = 344, μB = 20.2, aG = 1.24, μG = 0.172),
-    hematocrit = 0.42)
+    hematocrit = 0.42,
+)
     @extract (aB, μB, aG, μG) parameters
-    AB = aB - aB*aG / (μB-μG)
-    AG = aB*aG / (μB-μG)^2
-    Cb = [AB * t * exp(-μB*t) + AG * (exp(-μG*t) - exp(-μB*t)) for t in timepoints]
+    AB = aB - aB * aG / (μB - μG)
+    AG = aB * aG / (μB - μG)^2
+    Cb = [AB * t * exp(-μB * t) + AG * (exp(-μG * t) - exp(-μB * t)) for t in timepoints]
     Cb[timepoints.<=0] .= 0
     Cp = Cb ./ (1 - hematocrit)
     return Cp
@@ -180,17 +180,19 @@ The `timepoints` input is in minutes with the bolus arriving at 0.
 The model parameters from the paper will be used by default unless an optional `parameters` input is provided.
 The `hematocrit` is used to convert the concentration in blood to plasma and has default value of 0.42.
 """
-function aif_orton3(timepoints;
-    parameters = (aB = 2.84, μB = 22.8, aG =1.36, μG = 0.171),
-    hematocrit = 0.42)
+function aif_orton3(
+    timepoints;
+    parameters = (aB = 2.84, μB = 22.8, aG = 1.36, μG = 0.171),
+    hematocrit = 0.42,
+)
     @extract (aB, μB, aG, μG) parameters
-    tb = 2*pi / μB
+    tb = 2 * pi / μB
     Cb = zeros(length(timepoints))
-    for (i,t) in enumerate(timepoints)
-        if t<=tb
-            Cb[i] = aB * (1-cos(μB*t)) + aB*aG*_orton3_f(t,μG,μB)
+    for (i, t) in enumerate(timepoints)
+        if t <= tb
+            Cb[i] = aB * (1 - cos(μB * t)) + aB * aG * _orton3_f(t, μG, μB)
         else
-            Cb[i] = aB*aG*_orton3_f(tb, μG, μB)*exp(-μG*(t-tb))
+            Cb[i] = aB * aG * _orton3_f(tb, μG, μB) * exp(-μG * (t - tb))
         end
     end
     Cb[timepoints.<=0] .= 0
@@ -199,5 +201,6 @@ function aif_orton3(timepoints;
 end
 
 function _orton3_f(t, α, μB)
-    (1/α) * (1-exp(-α*t)) - (1/(α^2 + μB^2)) * (α*cos(μB*t) + μB*sin(μB*t) - α*exp(-α*t))
+    (1 / α) * (1 - exp(-α * t)) -
+    (1 / (α^2 + μB^2)) * (α * cos(μB * t) + μB * sin(μB * t) - α * exp(-α * t))
 end

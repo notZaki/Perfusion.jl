@@ -3,7 +3,7 @@ function expconv(A::AbstractVector, B::Number, t::AbstractVector)
     # Based on Flouri et al. (2016) MRM 76(3), doi: 10.1002/mrm.25991
     @assert length(A) == length(t)
     f = zeros(length(t))
-    for i in 2:length(t)
+    for i = 2:length(t)
         x = B * (t[i] - t[i-1])
         dA = (A[i] - A[i-1]) / x
         E = exp(-x)
@@ -21,7 +21,7 @@ macro extract(varnames, namedtuple)
 end
 
 function interquartile_mean(x::AbstractVector)
-    if std(x)>1e-3
+    if std(x) > 1e-3
         quartiles = quantile(x, [0.25, 0.75])
         # `<=` is safer than `<` because latter can creat empty array if x is short
         interquartile_x = @. x[quartiles[1] <= x <= quartiles[2]]
@@ -62,4 +62,18 @@ function unify_size(element, desired_size)
     else
         error("Element size: $(size(element)) does not match input size $(desired_size)")
     end
+end
+
+function make_folder(desired_folder::AbstractString; remove_existing = false)
+    if !isdir(desired_folder)
+        mkpath(desired_folder)
+    elseif remove_existing
+        rm(desired_folder, recursive = true)
+        mkpath(desired_folder)
+    end
+    return desired_folder
+end
+
+function readpath(dir)
+    return joinpath.(dir, readdir(dir))
 end
