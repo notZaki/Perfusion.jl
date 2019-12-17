@@ -34,6 +34,6 @@ export fit_exchange_nls, fit_exchange_lls
 export fit_filtration_nls, fit_filtration_lls
 export fit_rrm_nls, fit_rrm_lls, fit_crrm_nls, fit_crrm_lls
 export fit_errm_lls, fit_cerrm_lls
-export fit_rrift, fit_crrm_with_rrift, fit_cerrm_with_rrift
+export fit_rrift, fit_rrift_with_crrm, fit_rrift_with_cerrm
 
 end # module

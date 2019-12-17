@@ -4,8 +4,8 @@ include("./dce_models/exchange.jl")
 include("./dce_models/filtration.jl")
 include("./dce_models/reference_region.jl")
 
-function fit_model(modelname, fitmethod = :default; kwargs...)
-    return model_dict[modelname][fitmethod](; kwargs...)
+function fit_model(modelname, modelopt = :default; kwargs...)
+    return model_dict[modelname][modelopt](; kwargs...)
 end
 
 const model_dict = Dict{Symbol,Dict{Symbol,Function}}(
@@ -53,8 +53,8 @@ const model_dict = Dict{Symbol,Dict{Symbol,Function}}(
         :default => fit_cerrm_lls,
     ),
     :rrift => Dict{Symbol,Function}(
-        :crrm => fit_crrm_with_rrift,
-        :cerrm => fit_cerrm_with_rrift,
-        :default => fit_crrm_with_rrift,
+        :crrm => fit_rrift_with_crrm,
+        :cerrm => fit_rrift_with_cerrm,
+        :default => fit_rrift_with_crrm,
     ),
 )

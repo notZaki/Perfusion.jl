@@ -256,7 +256,7 @@ function fit_cerrm_lls(
     ),)
 end
 
-function fit_cerrm_with_rrift(; crr, cp, t, ct, tail_start, kep_rr = 0.0, mask = true)
+function fit_rrift_with_cerrm(; crr, cp, t, ct, tail_start, kep_rr = 0.0, mask = true)
     cerrm = fit_cerrm_lls(crr = crr, ct = ct, t = t, kep_rr = kep_rr, mask = mask).estimates
     kep_rr = cerrm.kep_rr
     kt_rr = fit_rrift(t = t, cp = cp, crr = crr, kep_rr = kep_rr, tail_start = tail_start)
@@ -273,7 +273,7 @@ function fit_cerrm_with_rrift(; crr, cp, t, ct, tail_start, kep_rr = 0.0, mask =
     ),)
 end
 
-function fit_crrm_with_rrift(; crr, cp, t, ct, tail_start, kep_rr = 0.0, mask = true)
+function fit_rrift_with_crrm(; crr, cp, t, ct, tail_start, kep_rr = 0.0, mask = true)
     crrm = fit_crrm_lls(crr = crr, ct = ct, t = t, kep_rr = kep_rr, mask = mask).estimates
     kep_rr = crrm.kep_rr
     kt_rr = fit_rrift(t = t, cp = cp, crr = crr, kep_rr = kep_rr, tail_start = tail_start)
