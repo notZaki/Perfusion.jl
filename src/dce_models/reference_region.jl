@@ -25,7 +25,7 @@ function fit_rrm_nls(
     volume_size = size(ct)[1:end-1]
     rel_kt, kep, kep_rr = (fill(NaN, volume_size...) for _ = 1:3)
     resolved_mask = resolve_mask_size(mask, volume_size)
-    lls_estimates = fit_referenceregion_lls(t = t, crr = crr, ct = ct, mask = mask).estimates
+    lls_estimates = fit_rrm_lls(t = t, crr = crr, ct = ct, mask = mask).estimates
     init_rel_kt, init_kep, init_kep_rr = select(lls_estimates, (:rel_kt, :kep, :kep_rr))
     model(x, p) = model_referenceregion(
     conv;

@@ -238,20 +238,20 @@ end
     rel_kt = round(rel_kt, digits = 3)
     rel_ve = round(rel_ve, digits = 3)
 
-    estimates = fit_model(:referenceregion, :lls, t = t, crr = crr, ct = ct, mask = [true]).estimates
+    estimates = fit_model(:rrm, :lls, t = t, crr = crr, ct = ct, mask = [true]).estimates
     @test round(estimates.rel_kt[1], digits = 3) == rel_kt
     @test round(estimates.rel_ve[1], digits = 3) == rel_ve
     @test round(estimates.kep[1], digits = 3) == test_params.kep
     @test round(estimates.kep_rr[1], digits = 3) == ref_params.kep
 
-    estimates = fit_model(:referenceregion, :nls, t = t, crr = crr, ct = ct).estimates
+    estimates = fit_model(:rrm, :nls, t = t, crr = crr, ct = ct).estimates
     @test round(estimates.rel_kt[1], digits = 3) == rel_kt
     @test round(estimates.rel_ve[1], digits = 3) == rel_ve
     @test round(estimates.kep[1], digits = 3) == test_params.kep
     @test round(estimates.kep_rr[1], digits = 3) == ref_params.kep
 
     estimates = fit_model(
-        :constrained_referenceregion,
+        :crrm,
         :lls,
         t = t,
         crr = crr,
@@ -263,14 +263,14 @@ end
     @test round(estimates.kep[1], digits = 3) == test_params.kep
     @test round(estimates.kep_rr[1], digits = 3) == ref_params.kep
 
-    estimates = fit_model(:constrained_referenceregion, :nls, t = t, crr = crr, ct = ct).estimates
+    estimates = fit_model(:crrm, :nls, t = t, crr = crr, ct = ct).estimates
     @test round(estimates.rel_kt[1], digits = 3) == rel_kt
     @test round(estimates.rel_ve[1], digits = 3) == rel_ve
     @test round(estimates.kep[1], digits = 3) == test_params.kep
     @test round(estimates.kep_rr[1], digits = 3) == ref_params.kep
 
     @test is_all_nan(fit_model(
-        :referenceregion,
+        :rrm,
         :lls,
         t = t,
         crr = crr,
@@ -278,7 +278,7 @@ end
         mask = false,
     ).estimates)
     @test is_all_nan(fit_model(
-        :referenceregion,
+        :rrm,
         :nls,
         t = t,
         crr = crr,
@@ -286,7 +286,7 @@ end
         mask = [false],
     ).estimates)
     @test is_all_nan(fit_model(
-        :constrained_referenceregion,
+        :crrm,
         :lls,
         t = t,
         crr = crr,
@@ -294,7 +294,7 @@ end
         mask = [false],
     ).estimates)
     @test is_all_nan(fit_model(
-        :constrained_referenceregion,
+        :crrm,
         :nls,
         t = t,
         crr = crr,
@@ -302,7 +302,7 @@ end
         mask = false,
     ).estimates)
     @test_throws ErrorException fit_model(
-        :referenceregion,
+        :rrm,
         t = t,
         crr = crr,
         ct = ct,
@@ -320,14 +320,14 @@ end
     rel_kt = round(rel_kt, digits = 1)
     rel_ve = round(rel_ve, digits = 1)
 
-    estimates = fit_model(:referenceregion, :lls, t = t, crr = crr, ct = noisy_ct).estimates
+    estimates = fit_model(:rrm, :lls, t = t, crr = crr, ct = noisy_ct).estimates
     @test round(mean(estimates.rel_kt), digits = 1) == rel_kt
     @test round(mean(estimates.rel_ve), digits = 1) == rel_ve
     @test round(mean(estimates.kep), digits = 1) == test_params.kep
     @test round(mean(estimates.kep_rr), digits = 1) == ref_params.kep
 
     estimates_constrained = fit_model(
-        :constrained_referenceregion,
+        :crrm,
         :lls,
         t = t,
         crr = crr,
