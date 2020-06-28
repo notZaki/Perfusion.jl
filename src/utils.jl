@@ -64,16 +64,3 @@ function unify_size(element, desired_size)
     end
 end
 
-function make_folder(desired_folder::AbstractString; remove_existing = false)
-    if !isdir(desired_folder)
-        mkpath(desired_folder)
-    elseif remove_existing
-        rm(desired_folder, recursive = true)
-        mkpath(desired_folder)
-    end
-    return desired_folder
-end
-
-function readpath(dir)
-    return joinpath.(dir, readdir(dir))
-end

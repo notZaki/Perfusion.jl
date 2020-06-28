@@ -11,8 +11,8 @@ function R1_to_concentration(R1; R10, r1)
     return @. (R1 - R10) / r1
 end
 
-function R1_to_signal(R1; M0, α, TR)
-    return spgr(M0 = M0, angle = α, TR = TR, R1 = R1)
+function R1_to_signal(R1; M0, angle, TR)
+    return spgr(; M0, angle, TR, R1)
 end
 
 function signal_to_R1(signal; R10, angle, TR, BAF::Int = 1, mask = [true])
@@ -49,15 +49,15 @@ function _signal_to_R1(signal, R10, angle, TR, BAF)
     return R1
 end
 
-function concentration_to_signal(Ct; r1, M0, α, TR, R10, mask = true)
-    R1 = concentration_to_R1(Ct; r1 = r1, R10 = R10, mask = mask)
-    signal = R1_to_signal(R1; M0 = M0, α = α, TR = TR)
+function concentration_to_signal(Ct; r1, M0, angle, TR, R10, mask = true)
+    R1 = concentration_to_R1(Ct; r1, R10, mask)
+    signal = R1_to_signal(R1; M0, αngle, TR)
     return signal
 end
 
 function signal_to_concentration(S; R10, angle, TR, r1, BAF::Int = 1, mask = true)
-    R1 = signal_to_R1(S; R10 = R10, angle = angle, TR = TR, BAF = BAF, mask = mask)
-    Ct = R1_to_concentration(R1; R10 = R10, r1 = r1)
+    R1 = signal_to_R1(S; R10, angle, TR, BAF, mask)
+    Ct = R1_to_concentration(R1; R10, r1)
     return Ct
 end
 
@@ -84,7 +84,7 @@ function fit_relaxation_despot(
         end
         M0[idx], T1[idx] = _despot(signal[idx, :], angles, TR)
     end
-    return (estimates = (M0 = M0, T1 = T1),)
+    return (; estimates = (; M0, T1))
 end
 
 # Refs: Deoni, S. C. L., Peters, T. M., & Rutt, B. K. (2005). MRM 53(1), 237–241. https://doi.org/10.1002/mrm.20314
@@ -127,7 +127,7 @@ function fit_relaxation_novifast(
         end
         M0[idx], T1[idx] = _novifast(signal[idx, :], angles, TR)
     end
-    return (estimates = (M0 = M0, T1 = T1),)
+    return (; estimates = (; M0, T1))
 end
 
 # Refs: Ramos-Llorden, G., Vegas-Sanchez-Ferrero, G., Bjork, M., Vanhevel, F., Parizel, P. M., San Jose Estepar, R., … Sijbers, J. (2018). IEEE Transactions on Medical Imaging, 37(11), 2414–2427. https://doi.org/10.1109/TMI.2018.2833288
@@ -206,12 +206,12 @@ function fit_relaxation_nls(
         fit = curve_fit(model, angles, signal[idx, :], [initialvalues.M0, initialvalues.T1])
         M0[idx], T1[idx] = fit.param
     end
-    return (estimates = (M0 = M0, T1 = T1),)
+    return (; estimates = (; M0, T1))
 end
 
-function _spgr(angle, M0, R1, TR, TE = 0.0, R2star = 0.0)
-    return @. M0 * sin(angle) * exp(-R2star * TE) * (1 - exp(-R1 * TR)) /
-              (1 - cos(angle) * exp(-R1 * TR))
+# [Todo] Replace with spgr() --- but check for speed difference first
+function _spgr(angle, M0, R1, TR)
+    return @. M0 * sin(angle) * (1 - exp(-R1 * TR)) / (1 - cos(angle) * exp(-R1 * TR))
 end
 
 const relaxation_dict = Dict{Symbol,Function}(

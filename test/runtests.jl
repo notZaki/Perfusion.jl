@@ -45,7 +45,7 @@ end
     α = [5, 10, 15, 20, 25, 30]
     TR = 5
 
-    signal = spgr(M0 = M0, R1 = R1, angle = α, TR = TR)
+    signal = Perfusion.spgr(M0 = M0, R1 = R1, angle = α, TR = TR)
 
     despot = fit_relaxation(:despot, signal = signal, angles = α, TR = TR)
     novifast = fit_relaxation(:novifast, signal = signal, angles = α, TR = TR)

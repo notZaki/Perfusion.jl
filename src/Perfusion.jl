@@ -1,17 +1,18 @@
 module Perfusion
 
 include("utils.jl")
-export @extract, interquartile_mean, percent_error, make_folder, readpath
+export @extract, interquartile_mean, percent_error
 
 using LinearAlgebra: norm
 using LsqFit
 using Statistics: mean
 include("relaxation.jl")
-export spgr,
-       concentration_to_R1,
+export signal_to_concentration,
        concentration_to_signal,
-       signal_to_concentration,
-       signal_to_R1
+       signal_to_R1,
+       R1_to_signal,
+       concentration_to_R1,
+       R1_to_concentration
 export fit_relaxation, fit_relaxation_nls, fit_relaxation_despot, fit_relaxation_novifast
 
 using SpecialFunctions: gamma
