@@ -68,18 +68,11 @@ function fit_relaxation_despot(
     TR::Real,
     mask = true,
 )
-    @assert length(angles) == size(signal)[end]
-    num_angles = length(angles)
-    if typeof(signal) <: AbstractVector
-        @assert length(signal) == num_angles
-        signal = reshape(signal, 1, num_angles)
-    end
-    volume_size = size(signal)[1:end-1]
+    (signal, angles, mask, num_angles, volume_size) = resolve_relaxation_inputs(; signal, angles, mask)
     M0, T1 = (fill(NaN, volume_size...) for _ = 1:2)
-    resolved_mask = resolve_mask_size(mask, volume_size)
 
-    for idx in eachindex(IndexCartesian(), resolved_mask)
-        if resolved_mask[idx] == false
+    for idx in eachindex(IndexCartesian(), mask)
+        if mask[idx] == false
             continue
         end
         M0[idx], T1[idx] = _despot(signal[idx, :], angles, TR)
@@ -111,18 +104,11 @@ function fit_relaxation_novifast(
     TR::Real,
     mask = true,
 )
-    @assert length(angles) == size(signal)[end]
-    num_angles = length(angles)
-    if typeof(signal) <: AbstractVector
-        @assert length(signal) == num_angles
-        signal = reshape(signal, 1, num_angles)
-    end
-    volume_size = size(signal)[1:end-1]
+    (signal, angles, mask, num_angles, volume_size) = resolve_relaxation_inputs(; signal, angles, mask)
     M0, T1 = (fill(NaN, volume_size...) for _ = 1:2)
-    resolved_mask = resolve_mask_size(mask, volume_size)
 
-    for idx in eachindex(IndexCartesian(), resolved_mask)
-        if resolved_mask[idx] == false
+    for idx in eachindex(IndexCartesian(), mask)
+        if mask[idx] == false
             continue
         end
         M0[idx], T1[idx] = _novifast(signal[idx, :], angles, TR)
@@ -180,6 +166,7 @@ function _novifast(
     return M0, T1
 end
 
+
 function fit_relaxation_nls(
     ;
     signal::AbstractArray,
@@ -188,19 +175,12 @@ function fit_relaxation_nls(
     initialvalues = (M0 = 5000.0, T1 = 1500.0),
     mask = true,
 )
-    @assert length(angles) == size(signal)[end]
-    num_angles = length(angles)
-    if typeof(signal) <: AbstractVector
-        @assert length(signal) == num_angles
-        signal = reshape(signal, 1, num_angles)
-    end
-    volume_size = size(signal)[1:end-1]
+    (signal, angles, mask, num_angles, volume_size) = resolve_relaxation_inputs(; signal, angles, mask)
     M0, T1 = (fill(NaN, volume_size...) for _ = 1:2)
-    resolved_mask = resolve_mask_size(mask, volume_size)
 
     @. model(x, p) = _spgr(x, p[1], 1 / p[2], TR)
-    for idx in eachindex(IndexCartesian(), resolved_mask)
-        if resolved_mask[idx] == false
+    for idx in eachindex(IndexCartesian(), mask)
+        if mask[idx] == false
             continue
         end
         fit = curve_fit(model, angles, signal[idx, :], [initialvalues.M0, initialvalues.T1])

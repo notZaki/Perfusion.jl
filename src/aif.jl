@@ -103,8 +103,8 @@ The `timepoints` input is in minutes with the bolus arriving at 0.
 The model describes concentration in plasma, therefore a hematocrit is not necessary.
 """
 function aif_weinmann(timepoints)
-    weinmann_parameters = (D = 0.1, a = [3.99, 4.78], m = [0.144, 0.0111])
-    return aif_biexponential(timepoints, parameters = weinmann_parameters, hematocrit = 0)
+    weinmann_parameters = (; D = 0.1, a = [3.99, 4.78], m = [0.144, 0.0111])
+    return aif_biexponential(timepoints; parameters = weinmann_parameters, hematocrit = 0)
 end
 
 """
@@ -117,9 +117,9 @@ The `timepoints` input is in minutes with the bolus arriving at 0.
 The model describes concentration in plasma, therefore a hematocrit is not necessary.
 """
 function aif_fritzhansen(timepoints; hematocrit = 0)
-    fritzhansen_parameters = (D = 1.0, a = [2.4, 0.62], m = [3.0, 0.016])
+    fritzhansen_parameters = (; D = 1.0, a = [2.4, 0.62], m = [3.0, 0.016])
     return aif_biexponential(
-        timepoints,
+        timepoints;
         parameters = fritzhansen_parameters,
         hematocrit = hematocrit,
     )
