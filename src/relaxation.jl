@@ -49,9 +49,9 @@ function _signal_to_R1(signal, R10, angle, TR, BAF)
     return R1
 end
 
-function concentration_to_signal(Ct; r1, M0, angle, TR, R10, mask = true)
-    R1 = concentration_to_R1(Ct; r1, R10, mask)
-    signal = R1_to_signal(R1; M0, αngle, TR)
+function concentration_to_signal(Ct; r1, M0, angle, TR, R10)
+    R1 = concentration_to_R1(Ct; r1, R10)
+    signal = R1_to_signal(R1; M0, angle, TR)
     return signal
 end
 

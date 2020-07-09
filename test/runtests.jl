@@ -61,6 +61,20 @@ end
     @test round(nls.estimates.T1[1], digits = 3) == T1
 end
 
+@testset "Signal <-> Concentration" begin
+    scan_timepoints = collect(1:600) ./ 60
+    aif_timepoints = scan_timepoints .- 1.0 # Define bolus arrival at 1 minute
+    r1 = 3.3/1000 # units: mM/ms
+    R10 = 1/1000 # units: 1/ms
+    TR = 5 # units: ms
+    angle = deg2rad(20)
+    M0 = 1_000
+    C = aif_georgiou(aif_timepoints)
+    signal = concentration_to_signal(C; r1, angle, TR, R10, M0)
+    new_C = signal_to_concentration(signal; r1, angle, TR, R10)
+    @test isapprox(C, new_C)
+end
+
 @testset "Tofts model" begin
     t = collect(1:600) ./ 60
     cp = aif_parker(t .- 1)
