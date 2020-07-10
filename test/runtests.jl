@@ -356,3 +356,18 @@ end
     @test std(estimates_constrained.rel_ve) < std(estimates.rel_ve)
     @test std(estimates_constrained.kep) < std(estimates.kep)
 end
+
+@testset "In-vivo demo" begin
+    destination = "./demo_data"
+    (vfa_folder, dce_folder) = Perfusion.download_invivo_studies(; destination)
+    vfa = load_vfa_dicom(folder = vfa_folder)
+    dce = load_dce_dicom(folder = dce_folder)
+
+    relaxation_maps = fit_relaxation(:despot; vfa...).estimates
+
+    bolus_arrival_frame = 3
+    r1 = 3.3/1000
+    concentration = signal_to_concentration(dce.signal; R10=1.0./relaxation_maps.T1, angle=dce.angle, TR=dce.TR, r1=r1, BAF=bolus_arrival_frame)
+
+    Perfusion.download_invivo_studies(; destination) # for more code coverage
+end

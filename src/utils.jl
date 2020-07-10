@@ -88,3 +88,24 @@ function unify_size(element, desired_size)
     end
 end
 
+function apply_mask(; data, mask)
+    @assert length(size(data)) >= length(size(mask))
+    mask_indices = findall(mask)
+    return data[mask_indices, :]
+end
+
+function crop(data::AbstractArray; mask=nothing)
+    if isnothing(mask)
+        mask = @. !isnan(data) & (data > 0)
+    end
+    xlim = findall(vec(sum(mask, dims = [2,3])) .> 0)
+    ylim = findall(vec(sum(mask, dims = [1,3])) .> 0)
+    return data[xlim, ylim, :]
+end
+
+function crop(data::NamedTuple; mask=nothing)
+    for key in keys(data)
+        data[key] = crop(data[key]; mask = mask)
+    end
+    return data
+end
