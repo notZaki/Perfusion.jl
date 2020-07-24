@@ -11,4 +11,7 @@ makedocs(
     assets = String[],
 )
 
+include("apply_citeproc.jl")
+apply_citeproc("./build")
+
 deploydocs(; repo = "github.com/notZaki/Perfusion.jl")
