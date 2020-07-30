@@ -77,7 +77,7 @@ function fit_relaxation_despot(
         end
         M0[idx], T1[idx] = _despot(signal[idx, :], angles, TR)
     end
-    return (; estimates = (; M0, T1))
+    return (; est = (; M0, T1))
 end
 
 # Refs: Deoni, S. C. L., Peters, T. M., & Rutt, B. K. (2005). MRM 53(1), 237–241. https://doi.org/10.1002/mrm.20314
@@ -113,7 +113,7 @@ function fit_relaxation_novifast(
         end
         M0[idx], T1[idx] = _novifast(signal[idx, :], angles, TR)
     end
-    return (; estimates = (; M0, T1))
+    return (; est = (; M0, T1))
 end
 
 # Refs: Ramos-Llorden, G., Vegas-Sanchez-Ferrero, G., Bjork, M., Vanhevel, F., Parizel, P. M., San Jose Estepar, R., … Sijbers, J. (2018). IEEE Transactions on Medical Imaging, 37(11), 2414–2427. https://doi.org/10.1109/TMI.2018.2833288
@@ -125,7 +125,7 @@ function _novifast(
     maxiter = 10,
     tol = 1e-6,
 )
-    estimates = [
+    est = [
         initialvalues.M0 * (1 * exp(-TR / initialvalues.T1)),
         exp(-TR / initialvalues.T1),
     ]
@@ -134,12 +134,12 @@ function _novifast(
     k = 0
     relerr = 1e10
     while k <= maxiter && relerr > tol
-        previous_estimates = copy(estimates)
+        previous_est = copy(est)
 
-        commondenom = 1 ./ (1 .- estimates[2] .* cosα)
+        commondenom = 1 ./ (1 .- est[2] .* cosα)
         a = signal .* cosα .* commondenom
         b = sinα .* commondenom
-        ahat = estimates[1] .* b .* cosα .* commondenom
+        ahat = est[1] .* b .* cosα .* commondenom
         svec = signal .* commondenom
 
         svec_b = svec' * b
@@ -152,14 +152,14 @@ function _novifast(
         num1 = svec_b * a_ahat - b_a * svec_ahat
         num2 = b_b * svec_ahat - svec_b * b_ahat
         denom = b_b * a_ahat - b_ahat * b_a
-        estimates = [num1 / denom, num2 / denom]
+        est = [num1 / denom, num2 / denom]
 
         k = k + 1
-        rel_err = norm(estimates .- previous_estimates) / norm(previous_estimates)
+        rel_err = norm(est .- previous_est) / norm(previous_est)
     end
-    M0 = estimates[1] / (1 - estimates[2])
-    if estimates[2] > 0
-        T1 = -TR / log(estimates[2])
+    M0 = est[1] / (1 - est[2])
+    if est[2] > 0
+        T1 = -TR / log(est[2])
     else
         T1 = NaN
     end
@@ -186,7 +186,7 @@ function fit_relaxation_nls(
         fit = curve_fit(model, angles, signal[idx, :], [initialvalues.M0, initialvalues.T1])
         M0[idx], T1[idx] = fit.param
     end
-    return (; estimates = (; M0, T1))
+    return (; est = (; M0, T1))
 end
 
 # [Todo] Replace with spgr() --- but check for speed difference first

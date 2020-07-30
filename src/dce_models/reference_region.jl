@@ -1,10 +1,10 @@
 function model_referenceregion(
     conv::Function = expconv;
     t::AbstractVector,
-    parameters::NamedTuple,
+    params::NamedTuple,
     crr::AbstractVector,
 )
-    @extract (rel_kt, kep, kep_rr) parameters
+    @extract (rel_kt, kep, kep_rr) params
     ct = rel_kt .* crr .+ (rel_kt * (kep_rr - kep)) .* conv(crr, kep, t)
     return ct
 end
@@ -18,14 +18,9 @@ function fit_rrm_nls(
 )
     (t, ct, mask, num_timepoints, volume_size) = resolve_fitting_inputs(; t, ca=crr, ct, mask)
     rel_kt, kep, kep_rr = (fill(NaN, volume_size...) for _ = 1:3)
-    lls_estimates = fit_rrm_lls(t = t, crr = crr, ct = ct, mask = mask).estimates
-    init_rel_kt, init_kep, init_kep_rr = select(lls_estimates, (:rel_kt, :kep, :kep_rr))
-    model(x, p) = model_referenceregion(
-    conv;
-    t = x,
-    crr = crr,
-    parameters = (rel_kt = p[1], kep = p[2], kep_rr = p[3]),
-    )
+    lls_est = fit_rrm_lls(; t, crr, ct, mask).est
+    init_rel_kt, init_kep, init_kep_rr = select(lls_est, (:rel_kt, :kep, :kep_rr))
+    model(x, p) = model_referenceregion(conv; t = x, crr, params = (rel_kt = p[1], kep = p[2], kep_rr = p[3]))
     for idx in eachindex(IndexCartesian(), mask)
         if mask[idx] == false
             continue
@@ -34,7 +29,7 @@ function fit_rrm_nls(
         rel_kt[idx], kep[idx], kep_rr[idx] = curve_fit(model, t, ct[idx, :], initialvalues).param
     end
     rel_ve = @. rel_kt * kep_rr / kep
-    return (; estimates = (; rel_kt, rel_ve, kep, kep_rr))
+    return (; est = (; rel_kt, rel_ve, kep, kep_rr))
 end
 
 function fit_rrm_lls(
@@ -44,7 +39,7 @@ function fit_rrm_lls(
     ct::AbstractArray,
     mask = true,
 )
-    (t, ct, mask, num_timepoints, volume_size) = resolve_fitting_inputs(; t, ca=crr, ct, mask)
+    (t, ct, mask, num_timepoints, volume_size) = resolve_fitting_inputs(; t, ca = crr, ct, mask)
     x1, x2, x3 = (fill(NaN, volume_size...) for _ = 1:3)
 
     M = zeros(num_timepoints, 3)
@@ -62,7 +57,7 @@ function fit_rrm_lls(
     rel_ve = x2 ./ x3
     kep = x3
     kep_rr = x2 ./ x1
-    return (; estimates = (; rel_kt, rel_ve, kep, kep_rr))
+    return (; est = (; rel_kt, rel_ve, kep, kep_rr))
 end
 
 function fit_crrm_nls(
@@ -73,21 +68,21 @@ function fit_crrm_nls(
     mask = true,
     kep_rr = 0.0,
 )
-    (t, ct, mask, num_timepoints, volume_size) = resolve_fitting_inputs(; t, ca=crr, ct, mask)
+    (t, ct, mask, num_timepoints, volume_size) = resolve_fitting_inputs(; t, ca = crr, ct, mask)
     rel_kt, kep = (fill(NaN, volume_size...) for _ = 1:2)
     
     if kep_rr <= 0
-        rrm_estimates = fit_rrm_nls(conv; t = t, crr = crr, ct = ct, mask = mask).estimates
-        viable_estimates = positive_only_mask(rrm_estimates)
-        kep_rr = interquartile_mean(rrm_estimates.kep_rr[viable_estimates])
+        rrm_est = fit_rrm_nls(conv; t, crr, ct, mask).est
+        viable_est = positive_only_mask(rrm_est)
+        kep_rr = interquartile_mean(rrm_est.kep_rr[viable_est])
     end
-    lls_estimates = fit_crrm_lls(t = t, crr = crr, ct = ct, kep_rr = kep_rr, mask = mask).estimates
-    init_rel_kt, init_kep = select(lls_estimates, (:rel_kt, :kep))
+    lls_est = fit_crrm_lls(; t, crr, ct, kep_rr, mask = mask).est
+    init_rel_kt, init_kep = select(lls_est, (:rel_kt, :kep))
     model(x, p) = model_referenceregion(
     conv;
     t = x,
-    crr = crr,
-    parameters = (rel_kt = p[1], kep = p[2], kep_rr = kep_rr))
+    crr,
+    params = (rel_kt = p[1], kep = p[2], kep_rr = kep_rr))
     for idx in eachindex(IndexCartesian(), mask)
         if mask[idx] == false
             continue
@@ -96,7 +91,7 @@ function fit_crrm_nls(
         rel_kt[idx], kep[idx] = curve_fit(model, t, ct[idx, :], initialvalues).param
     end
     rel_ve = @. rel_kt * kep_rr / kep
-    return (; estimates = (; rel_kt, rel_ve, kep, kep_rr))
+    return (; est = (; rel_kt, rel_ve, kep, kep_rr))
 end
 
 function fit_crrm_lls(
@@ -107,13 +102,13 @@ function fit_crrm_lls(
     mask = true,
     kep_rr = 0.0,
 )
-    (t, ct, mask, num_timepoints, volume_size) = resolve_fitting_inputs(; t, ca=crr, ct, mask)
+    (t, ct, mask, num_timepoints, volume_size) = resolve_fitting_inputs(; t, ca = crr, ct, mask)
     rel_kt, kep = (fill(NaN, volume_size...) for _ = 1:2)
 
     if kep_rr <= 0
-        rrm_estimates = fit_rrm_lls(t = t, crr = crr, ct = ct, mask = mask).estimates
-        viable_estimates = positive_only_mask(rrm_estimates)
-        kep_rr = interquartile_mean(rrm_estimates.kep_rr[viable_estimates])
+        rrm_est = fit_rrm_lls(; t, crr, ct, mask).est
+        viable_est = positive_only_mask(rrm_est)
+        kep_rr = interquartile_mean(rrm_est.kep_rr[viable_est])
     end
 
     M = zeros(num_timepoints, 2)
@@ -126,7 +121,7 @@ function fit_crrm_lls(
         rel_kt[idx], kep[idx] = M \ ct[idx, :]
     end
     rel_ve = @. rel_kt * kep_rr / kep
-    return (estimates = (rel_kt = rel_kt, rel_ve = rel_ve, kep = kep, kep_rr = kep_rr),)
+    return (est = (rel_kt = rel_kt, rel_ve = rel_ve, kep = kep, kep_rr = kep_rr),)
 end
 
 function fit_errm_lls(
@@ -136,7 +131,7 @@ function fit_errm_lls(
     ct::AbstractArray,
     mask = true,
 )
-    (t, ct, mask, num_timepoints, volume_size) = resolve_fitting_inputs(; t, ca=crr, ct, mask)
+    (t, ct, mask, num_timepoints, volume_size) = resolve_fitting_inputs(; t, ca = crr, ct, mask)
     x1, x2, x3, x4 = (fill(NaN, volume_size...) for _ = 1:4)
 
     M = zeros(num_timepoints, 4)
@@ -161,7 +156,7 @@ function fit_errm_lls(
     rel_ve = @. rel_kt * kep_rr / x3
     kep = x3
     rel_vp = x4
-    return (; estimates = (; rel_kt, rel_ve, rel_vp, kep, kep_rr))
+    return (; est = (; rel_kt, rel_ve, rel_vp, kep, kep_rr))
 end
 
 function fit_cerrm_lls(
@@ -172,13 +167,13 @@ function fit_cerrm_lls(
     mask = true,
     kep_rr = 0.0,
 )
-    (t, ct, mask, num_timepoints, volume_size) = resolve_fitting_inputs(; t, ca=crr, ct, mask)
+    (t, ct, mask, num_timepoints, volume_size) = resolve_fitting_inputs(; t, ca = crr, ct, mask)
     x1, rel_vp, kep = (fill(NaN, volume_size...) for _ = 1:3)
 
     if kep_rr <= 0
-        rrm_estimates = fit_errm_lls(t = t, crr = crr, ct = ct, mask = mask).estimates
-        viable_estimates = positive_only_mask(rrm_estimates)
-        kep_rr = interquartile_mean(rrm_estimates.kep_rr[viable_estimates])
+        rrm_est = fit_errm_lls(; t, crr, ct, mask).est
+        viable_est = positive_only_mask(rrm_est)
+        kep_rr = interquartile_mean(rrm_est.kep_rr[viable_est])
     end
 
     M = zeros(num_timepoints, 3)
@@ -196,25 +191,25 @@ function fit_cerrm_lls(
     end
     rel_kt = @. x1 - kep * rel_vp
     rel_ve = @. rel_kt * kep_rr / kep
-    return (; estimates = (; rel_kt, rel_ve, rel_vp, kep, kep_rr))
+    return (; est = (; rel_kt, rel_ve, rel_vp, kep, kep_rr))
 end
 
 function fit_rrift_with_cerrm(; crr, cp, t, ct, tail_start, kep_rr = 0.0, mask = true)
-    cerrm = fit_cerrm_lls(; crr, ct, t, kep_rr, mask).estimates
+    cerrm = fit_cerrm_lls(; crr, ct, t, kep_rr, mask).est
     kep_rr = cerrm.kep_rr
     kt_rr = fit_rrift(; t, cp, crr, kep_rr, tail_start)
     ve_rr = kt_rr / kep_rr
     est = relative_to_absolute(cerrm; kt_rr, ve_rr)
-    return (estimates = (; est..., kep_rr, kt_rr, ve_rr))
+    return (est = (; est..., kep_rr, kt_rr, ve_rr))
 end
 
 function fit_rrift_with_crrm(; crr, cp, t, ct, tail_start, kep_rr = 0.0, mask = true)
-    crrm = fit_crrm_lls(; crr, ct, t, kep_rr, mask).estimates
+    crrm = fit_crrm_lls(; crr, ct, t, kep_rr, mask).est
     kep_rr = crrm.kep_rr
     kt_rr = fit_rrift(; t, cp, crr, kep_rr, tail_start)
     ve_rr = kt_rr / kep_rr
     est = relative_to_absolute(crrm; kt_rr, ve_rr)
-    return (estimates = (; est..., kep_rr, kt_rr, ve_rr))
+    return (est = (; est..., kep_rr, kt_rr, ve_rr))
 end
 
 function fit_rrift(

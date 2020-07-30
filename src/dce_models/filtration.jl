@@ -1,22 +1,22 @@
 function model_filtration(
     conv::Function = expconv;
     t::AbstractVector,
-    parameters::NamedTuple,
+    params::NamedTuple,
     ca::AbstractVector,
 )
-    if all(haskey(parameters, key) for key in (:Tp, :Te))
-        @extract (ve, vp) parameters
-        fp = vp / parameters.Tp
-        ps = ve / parameters.Te
+    if all(haskey(params, key) for key in (:Tp, :Te))
+        @extract (ve, vp) params
+        fp = vp / params.Tp
+        ps = ve / params.Te
     else
-        @extract (fp, ps, ve, vp) parameters
+        @extract (fp, ps, ve, vp) params
     end
     ct = _model_filtration(conv, t, [fp, ps, ve, vp], ca)
     return ct
 end
 
-function _model_filtration(conv, t, parameters, ca)
-    fp, ps, ve, vp = parameters
+function _model_filtration(conv, t, params, ca)
+    fp, ps, ve, vp = params
     Tminus = vp / fp
     Tplus = ve / ps
     T = (vp + ve) / fp
@@ -36,8 +36,8 @@ function fit_filtration_nls(
     (t, ct, mask, num_timepoints, volume_size) = resolve_fitting_inputs(; t, ca, ct, mask)
     fp, ps, vp, ve = (fill(NaN, volume_size...) for _ = 1:4)
     model(x, p) = _model_filtration(conv, x, p, ca)
-    lls_estimates = fit_filtration_lls(t = t, ca = ca, ct = ct, mask = mask).estimates
-    init_fp, init_ps, init_ve, init_vp = select(lls_estimates, (:fp, :ps, :ve, :vp))
+    lls_est = fit_filtration_lls(; t, ca, ct, mask).est
+    init_fp, init_ps, init_ve, init_vp = select(lls_est, (:fp, :ps, :ve, :vp))
     for idx in eachindex(IndexCartesian(), mask)
         if mask[idx] == false
             continue
@@ -51,7 +51,7 @@ function fit_filtration_nls(
     @. T[fp==0] = 0
     @. Tp[fp==0] = 0
     @. Te[ps==0] = 0
-    return (; estimates = (; fp, ps, ve, vp, T, Tp, Te))
+    return (; est = (; fp, ps, ve, vp, T, Tp, Te))
 end
 
 function fit_filtration_lls(
@@ -83,5 +83,5 @@ function fit_filtration_lls(
     vp = @. fp * Tp
     ve = @. fp * (T - Tp)
     ps = @. ve / Te
-    return (; estimates = (; fp, ps, ve, vp, T, Te, Tp))
+    return (; est = (; fp, ps, ve, vp, T, Te, Tp))
 end

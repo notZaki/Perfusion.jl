@@ -1,10 +1,10 @@
 function model_uptake(
     conv::Function = expconv;
     t::AbstractVector,
-    parameters::NamedTuple,
+    params::NamedTuple,
     ca::AbstractVector,
 )
-    @extract (fp, ps, vp) parameters
+    @extract (fp, ps, vp) params
     Tp = vp / (fp + ps)
     E = ps / (fp + ps)
     ca_conv_1 = zeros(length(t))
@@ -25,9 +25,9 @@ function fit_uptake_nls(
     (t, ct, mask, num_timepoints, volume_size) = resolve_fitting_inputs(; t, ca, ct, mask)
     fp, ps, vp = (fill(NaN, volume_size...) for _ = 1:3)
     model(x, p) =
-        model_uptake(t = x, ca = ca, parameters = (fp = p[1], ps = p[2], vp = p[3]))
-    lls_estimates = fit_uptake_lls(t = t, ca = ca, ct = ct, mask = mask).estimates
-    init_fp, init_ps, init_vp = select(lls_estimates, (:fp, :ps, :vp))
+        model_uptake(; t = x, ca, params = (fp = p[1], ps = p[2], vp = p[3]))
+    lls_est = fit_uptake_lls(; t, ca, ct, mask).est
+    init_fp, init_ps, init_vp = select(lls_est, (:fp, :ps, :vp))
     for idx in eachindex(IndexCartesian(), mask)
         if mask[idx] == false
             continue
@@ -35,7 +35,7 @@ function fit_uptake_nls(
         initialvalue = [init_fp[idx], init_ps[idx], init_vp[idx]]
         (fp[idx], ps[idx], vp[idx]) = curve_fit(model, t, ct[idx, :], initialvalue).param
     end
-    return (; estimates = (; fp, ps, vp))
+    return (; est = (; fp, ps, vp))
 end
 
 function fit_uptake_lls(
@@ -63,5 +63,5 @@ function fit_uptake_lls(
     @. vp = fp^2 / denum
     @. ps[denum==0] = 0
     @. vp[denum==0] = 0
-    return (; estimates = (; fp, ps, vp))
+    return (; est = (; fp, ps, vp))
 end
