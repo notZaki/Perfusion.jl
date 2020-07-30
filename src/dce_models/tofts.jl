@@ -127,8 +127,7 @@ function fit_extendedtofts_nls(
     return (; est)
 end
 
-function fit_tofts_lls(
-    ;
+function fit_tofts_lls(;
     t::AbstractVector,
     ca::AbstractVector,
     ct::AbstractArray,
@@ -150,8 +149,7 @@ function fit_tofts_lls(
     return (; est)
 end
 
-function fit_extendedtofts_lls(
-    ;
+function fit_extendedtofts_lls(;
     t::AbstractVector,
     ca::AbstractVector,
     ct::AbstractArray,

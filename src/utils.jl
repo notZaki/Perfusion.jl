@@ -16,7 +16,10 @@ end
 
 macro extract(varnames, namedtuple)
     ex = Expr(:block)
-    ex.args = [:($(esc(var)) = getindex($(esc(namedtuple)), $(esc(QuoteNode(var))))) for var in varnames.args]
+    ex.args = [
+        :($(esc(var)) = getindex($(esc(namedtuple)), $(esc(QuoteNode(var)))))
+        for var in varnames.args
+    ]
     ex
 end
 
@@ -24,7 +27,7 @@ function interquartile_mean(x::AbstractVector)
     if std(x) > 1e-3
         quartiles = quantile(x, [0.25, 0.75])
         # `<=` is safer than `<` because latter can creat empty array if x is short
-        interquartile_x = @. x[quartiles[1] <= x <= quartiles[2]]
+        interquartile_x = @. x[quartiles[1]<=x<=quartiles[2]]
     else
         interquartile_x = x
     end
@@ -94,16 +97,16 @@ function apply_mask(; data, mask)
     return data[mask_indices, :]
 end
 
-function crop(data::AbstractArray; mask=nothing)
+function crop(data::AbstractArray; mask = nothing)
     if isnothing(mask)
         mask = @. !isnan(data) & (data > 0)
     end
-    xlim = findall(vec(sum(mask, dims = [2,3])) .> 0)
-    ylim = findall(vec(sum(mask, dims = [1,3])) .> 0)
+    xlim = findall(vec(sum(mask, dims = [2, 3])) .> 0)
+    ylim = findall(vec(sum(mask, dims = [1, 3])) .> 0)
     return data[xlim, ylim, :]
 end
 
-function crop(data::NamedTuple; mask=nothing)
+function crop(data::NamedTuple; mask = nothing)
     for key in keys(data)
         data[key] = crop(data[key]; mask = mask)
     end

@@ -1,27 +1,24 @@
 using Documenter, Perfusion
 
-makedocs(
-    ;
+makedocs(;
     modules = [Perfusion],
-    format = Documenter.HTML(
-        prettyurls = get(ENV, "CI", nothing) == "true"
-    ),
-    pages=[
+    format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true"),
+    pages = [
         "Introduction" => "index.md",
         "Pre-processing" => Any[
-            "Loading DICOM" => "preprocessing/loading.md",
-            "T1 mapping" => "preprocessing/T1mapping.md",
-            "Signal to Concentration" => "preprocessing/signal2concentration.md"
+            "Loading DICOM"=>"preprocessing/loading.md",
+            "T1 mapping"=>"preprocessing/T1mapping.md",
+            "Signal to Concentration"=>"preprocessing/signal2concentration.md",
         ],
         "AIF-based Models" => Any[
-            "AIF" => "models/aif.md",
-            "Tofts" => "models/tofts.md",
-            "Extended Tofts" => "models/extendedtofts.md",
-            "Exchange" => "models/exchange.md",
-            "Uptake" => "models/uptake.md",
-            "Filtration" => "models/filtration.md"
+            "AIF"=>"models/aif.md",
+            "Tofts"=>"models/tofts.md",
+            "Extended Tofts"=>"models/extendedtofts.md",
+            "Exchange"=>"models/exchange.md",
+            "Uptake"=>"models/uptake.md",
+            "Filtration"=>"models/filtration.md",
         ],
-        "Functions" => "functions.md"
+        "Functions" => "functions.md",
     ],
     repo = "https://github.com/notZaki/Perfusion.jl/blob/{commit}{path}#L{line}",
     sitename = "Perfusion.jl",

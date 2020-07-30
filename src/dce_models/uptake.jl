@@ -24,8 +24,7 @@ function fit_uptake_nls(
 )
     (t, ct, mask, num_timepoints, volume_size) = resolve_fitting_inputs(; t, ca, ct, mask)
     fp, ps, vp = (fill(NaN, volume_size...) for _ = 1:3)
-    model(x, p) =
-        model_uptake(; t = x, ca, params = (fp = p[1], ps = p[2], vp = p[3]))
+    model(x, p) = model_uptake(; t = x, ca, params = (fp = p[1], ps = p[2], vp = p[3]))
     lls_est = fit_uptake_lls(; t, ca, ct, mask).est
     init_fp, init_ps, init_vp = select(lls_est, (:fp, :ps, :vp))
     for idx in eachindex(IndexCartesian(), mask)
@@ -38,8 +37,7 @@ function fit_uptake_nls(
     return (; est = (; fp, ps, vp))
 end
 
-function fit_uptake_lls(
-    ;
+function fit_uptake_lls(;
     t::AbstractVector,
     ca::AbstractVector,
     ct::AbstractArray,

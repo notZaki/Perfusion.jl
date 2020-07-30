@@ -28,8 +28,8 @@ end
     plot_cfg(name) =
         (title = name, xlabel = "Gd [mM]", ylabel = "time [min]", canvas = DotCanvas)
     printdiv() = printstyled(
-    "\n==================================================================================\n",
-    color = :light_black,
+        "\n==================================================================================\n",
+        color = :light_black,
     )
 
     for (name, func) in aifs_to_test
@@ -64,8 +64,8 @@ end
 @testset "Signal <-> Concentration" begin
     scan_timepoints = collect(1:600) ./ 60
     aif_timepoints = scan_timepoints .- 1.0 # Define bolus arrival at 1 minute
-    r1 = 3.3/1000 # units: mM/ms
-    R10 = 1/1000 # units: 1/ms
+    r1 = 3.3 / 1000 # units: mM/ms
+    R10 = 1 / 1000 # units: 1/ms
     TR = 5 # units: ms
     angle = deg2rad(20)
     M0 = 1_000
@@ -113,21 +113,8 @@ end
     @test round(est.vp[1], digits = 3) == params.vp
 
     @test is_all_nan(fit_model(:extendedtofts, :lls; t, ca, ct, mask = false).est)
-    @test is_all_nan(fit_model(
-        :extendedtofts,
-        :nls;
-        t,
-        ca,
-        ct,
-        mask = [false],
-    ).est)
-    @test_throws ErrorException fit_model(
-        :extendedtofts;
-        t,
-        ca,
-        ct,
-        mask = [true, true],
-    )
+    @test is_all_nan(fit_model(:extendedtofts, :nls; t, ca, ct, mask = [false]).est)
+    @test_throws ErrorException fit_model(:extendedtofts; t, ca, ct, mask = [true, true])
 end
 
 @testset "Compartmental tissue uptake model" begin
@@ -149,13 +136,7 @@ end
 
     @test is_all_nan(fit_model(:uptake, :lls; t, ca, ct, mask = false).est)
     @test is_all_nan(fit_model(:uptake, :nls; t, ca, ct, mask = [false]).est)
-    @test_throws ErrorException fit_model(
-        :uptake;
-        t,
-        ca,
-        ct,
-        mask = [true, true],
-    )
+    @test_throws ErrorException fit_model(:uptake; t, ca, ct, mask = [true, true])
 end
 
 @testset "Two compartment exchange model" begin
@@ -179,13 +160,7 @@ end
 
     @test is_all_nan(fit_model(:exchange, :lls; t, ca, ct, mask = false).est)
     @test is_all_nan(fit_model(:exchange, :nls; t, ca, ct, mask = [false]).est)
-    @test_throws ErrorException fit_model(
-        :exchange;
-        t,
-        ca,
-        ct,
-        mask = [true, true],
-    )
+    @test_throws ErrorException fit_model(:exchange; t, ca, ct, mask = [true, true])
 
     fp, ps, vp, ve = (0.75, 0.05, 0.25, 0.10)
     params_a = (fp = fp, ps = ps, vp = vp, ve = ve)
@@ -216,13 +191,7 @@ end
 
     @test is_all_nan(fit_model(:filtration, :lls; t, ca, ct, mask = false).est)
     @test is_all_nan(fit_model(:filtration, :nls; t, ca, ct, mask = [false]).est)
-    @test_throws ErrorException fit_model(
-        :filtration;
-        t,
-        ca,
-        ct,
-        mask = [true, true],
-    )
+    @test_throws ErrorException fit_model(:filtration; t, ca, ct, mask = [true, true])
 
     fp, ps, vp, ve = (0.75, 0.05, 0.25, 0.10)
     params_a = (fp = fp, ps = ps, vp = vp, ve = ve)
@@ -258,14 +227,7 @@ end
     @test round(est.kep[1], digits = 3) == params.kep
     @test round(est.kep_rr[1], digits = 3) == ref_params.kep
 
-    est = fit_model(
-        :crrm,
-        :lls;
-        t,
-        crr,
-        ct,
-        mask = [true],
-    ).est
+    est = fit_model(:crrm, :lls; t, crr, ct, mask = [true]).est
     @test round(est.rel_kt[1], digits = 3) == rel_kt
     @test round(est.rel_ve[1], digits = 3) == rel_ve
     @test round(est.kep[1], digits = 3) == params.kep
@@ -277,45 +239,11 @@ end
     @test round(est.kep[1], digits = 3) == params.kep
     @test round(est.kep_rr[1], digits = 3) == ref_params.kep
 
-    @test is_all_nan(fit_model(
-        :rrm,
-        :lls;
-        t,
-        crr,
-        ct,
-        mask = false,
-    ).est)
-    @test is_all_nan(fit_model(
-        :rrm,
-        :nls;
-        t,
-        crr,
-        ct,
-        mask = [false],
-    ).est)
-    @test is_all_nan(fit_model(
-        :crrm,
-        :lls;
-        t,
-        crr,
-        ct,
-        mask = [false],
-    ).est)
-    @test is_all_nan(fit_model(
-        :crrm,
-        :nls;
-        t,
-        crr,
-        ct,
-        mask = false,
-    ).est)
-    @test_throws ErrorException fit_model(
-        :rrm;
-        t,
-        crr,
-        ct,
-        mask = [true, true],
-    )
+    @test is_all_nan(fit_model(:rrm, :lls; t, crr, ct, mask = false).est)
+    @test is_all_nan(fit_model(:rrm, :nls; t, crr, ct, mask = [false]).est)
+    @test is_all_nan(fit_model(:crrm, :lls; t, crr, ct, mask = [false]).est)
+    @test is_all_nan(fit_model(:crrm, :nls; t, crr, ct, mask = false).est)
+    @test_throws ErrorException fit_model(:rrm; t, crr, ct, mask = [true, true])
 
     # With noise
     num_noisy_replications = 100
@@ -334,13 +262,7 @@ end
     @test round(mean(est.kep), digits = 1) == params.kep
     @test round(mean(est.kep_rr), digits = 1) == ref_params.kep
 
-    est_constrained = fit_model(
-        :crrm,
-        :lls;
-        t,
-        crr,
-        ct = noisy_ct,
-    ).est
+    est_constrained = fit_model(:crrm, :lls; t, crr, ct = noisy_ct).est
     @test round(mean(est_constrained.rel_kt), digits = 1) == rel_kt
     @test round(mean(est_constrained.rel_ve), digits = 1) == rel_ve
     @test round(mean(est_constrained.kep), digits = 1) == params.kep
@@ -360,8 +282,15 @@ end
     relaxation_maps = fit_relaxation(:despot; vfa...).est
 
     bolus_arrival_frame = 3
-    r1 = 3.3/1000
-    concentration = signal_to_concentration(dce.signal; R10=1.0./relaxation_maps.T1, angle=dce.angle, TR=dce.TR, r1=r1, BAF=bolus_arrival_frame)
+    r1 = 3.3 / 1000
+    concentration = signal_to_concentration(
+        dce.signal;
+        R10 = 1.0 ./ relaxation_maps.T1,
+        angle = dce.angle,
+        TR = dce.TR,
+        r1 = r1,
+        BAF = bolus_arrival_frame,
+    )
 
     Perfusion.download_invivo_studies(; destination) # for more code coverage
 end

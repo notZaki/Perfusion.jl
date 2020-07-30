@@ -12,11 +12,11 @@ using LsqFit
 using Statistics: mean
 include("relaxation.jl")
 export signal_to_concentration,
-       concentration_to_signal,
-       signal_to_R1,
-       R1_to_signal,
-       concentration_to_R1,
-       R1_to_concentration
+    concentration_to_signal,
+    signal_to_R1,
+    R1_to_signal,
+    concentration_to_R1,
+    R1_to_concentration
 export fit_relaxation, fit_relaxation_nls, fit_relaxation_despot, fit_relaxation_novifast
 
 using SpecialFunctions: gamma

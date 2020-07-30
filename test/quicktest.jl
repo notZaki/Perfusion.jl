@@ -26,7 +26,8 @@ std(estimates.rel_kt)
 std(estimates.rel_ve)
 std(estimates.kep)
 
-estimates = fit_model(:constrained_referenceregion, :lls, t = t, crr = crr, ct = noisy_ct).estimates
+estimates =
+    fit_model(:constrained_referenceregion, :lls, t = t, crr = crr, ct = noisy_ct).estimates
 mean(estimates.rel_kt)
 mean(estimates.rel_ve)
 mean(estimates.kep)

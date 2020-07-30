@@ -1,6 +1,10 @@
 const gbm_study_uid = "1.3.6.1.4.1.14519.5.2.1.4591.4001.304604545029494418165835320551"
 
-function download_invivo_studies(study=gbm_study_uid; destination::AbstractString, overwrite = false)
+function download_invivo_studies(
+    study = gbm_study_uid;
+    destination::AbstractString,
+    overwrite = false,
+)
     make_folder(destination)
     (vfa_folder, dce_folder) = download_vfa_and_dce(study; destination, overwrite)
     return (vfa_folder, dce_folder)

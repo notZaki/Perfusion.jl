@@ -11,11 +11,11 @@ function load_vfa_dicom(dir)
     flip_angles = zeros(num_images)
     for dicom in dicoms
         instance = lookup(dicom, "Instance Number")
-        signal[:,:,instance] = lookup(dicom, "Pixel Data")
+        signal[:, :, instance] = lookup(dicom, "Pixel Data")
         flip_angles[instance] = lookup(dicom, "Flip Angle")
     end
     signal = reshape(signal, (image_size..., num_slices, num_flip_angles))
-    flip_angles = reshape(flip_angles, (num_slices, num_flip_angles))[1,:]
+    flip_angles = reshape(flip_angles, (num_slices, num_flip_angles))[1, :]
     @. flip_angles = deg2rad(flip_angles)
     TR = lookup(dicoms[1], "Repetition Time")
     return (; signal, angles = flip_angles, TR)
@@ -32,11 +32,11 @@ function load_dce_dicom(dir; num_slices::Integer)
     timepoints = zeros(num_images)
     for dicom in dicom_files
         instance = lookup(dicom, "Instance Number")
-        signal[:,:,instance] = lookup(dicom, "Pixel Data")
+        signal[:, :, instance] = lookup(dicom, "Pixel Data")
         timepoints[instance] = lookup(dicom, "Trigger Time")
     end
     signal = reshape(signal, (image_size..., num_slices, num_timepoints))
-    timepoints = reshape(timepoints, (num_slices, num_timepoints))[1,:] ./ 1000 ./ 60
+    timepoints = reshape(timepoints, (num_slices, num_timepoints))[1, :] ./ 1000 ./ 60
     TR = lookup(dicom_files[1], "Repetition Time")
     flip_angle = deg2rad(lookup(dicom_files[1], "Flip Angle"))
     return (; signal, t = vec(timepoints), TR, angle = flip_angle)

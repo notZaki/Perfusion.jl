@@ -45,7 +45,8 @@ function fit_exchange_nls(
             continue
         end
         initialvalue = [init_fp[idx], init_ps[idx], init_ve[idx], init_vp[idx]]
-        fp[idx], ps[idx], ve[idx], vp[idx] = curve_fit(model, t, ct[idx, :], initialvalue).param
+        fp[idx], ps[idx], ve[idx], vp[idx] =
+            curve_fit(model, t, ct[idx, :], initialvalue).param
     end
     T = @. (vp + ve) / fp
     Tp = @. vp / fp
@@ -53,8 +54,7 @@ function fit_exchange_nls(
     return (; est = (; fp, ps, ve, vp, T, Tp, Te))
 end
 
-function fit_exchange_lls(
-    ;
+function fit_exchange_lls(;
     t::AbstractVector,
     ca::AbstractVector,
     ct::AbstractArray,

@@ -18,21 +18,18 @@ The hematocrit `hct` is used to convert the concentration in blood to plasma and
 """
 function aif_parker(t; params = _parker_params, hct = 0.42)
     @extract (A, T, σ, α, β, s, τ) params
-    cb = [(A[1] / (σ[1] * sqrt(2 * pi))) * exp(-(t - T[1])^2 / (2 * (σ[1])^2)) +
-          (A[2] / (σ[2] * sqrt(2 * pi))) * exp(-(t - T[2])^2 / (2 * (σ[2])^2)) +
-            α * exp(-β * t) / (1.0 + exp(-s * (t - τ))) for t in t]
-    cb[t .<= 0] .= 0
+    cb = [
+        (A[1] / (σ[1] * sqrt(2 * pi))) * exp(-(t - T[1])^2 / (2 * (σ[1])^2)) +
+        (A[2] / (σ[2] * sqrt(2 * pi))) * exp(-(t - T[2])^2 / (2 * (σ[2])^2)) +
+        α * exp(-β * t) / (1.0 + exp(-s * (t - τ))) for t in t
+    ]
+    cb[t.<=0] .= 0
     ca = cb ./ (1 - hct)
     return ca
 end
 
-const _georgiou_params = (
-    A = [0.37, 0.33, 10.06],
-    m = [0.11, 1.17, 16.02],
-    α = 5.26,
-    β = 0.032,
-    τ = 0.129,
-)
+const _georgiou_params =
+    (A = [0.37, 0.33, 10.06], m = [0.11, 1.17, 16.02], α = 5.26, β = 0.032, τ = 0.129)
 
 """
     aif_georgiou(t; params, hct = 0.35)
@@ -61,7 +58,7 @@ function aif_georgiou(t; params = _georgiou_params, hct = 0.35)
         end
     end
     cb = exponential_part .* gammavariate_part
-    cb[t .<= 0] .= 0
+    cb[t.<=0] .= 0
     ca = cb ./ (1 - hct)
     return ca
 end
@@ -88,7 +85,7 @@ The default value is set to to zero, i.e. no conversion takes place.
 function aif_biexponential(t; params, hct = 0)
     @extract (D, a, m) params
     cb = [D * (a[1] * exp(-m[1] * t) + a[2] * exp(-m[2] * t)) for t in t]
-    cb[t .<= 0] .= 0
+    cb[t.<=0] .= 0
     ca = cb ./ (1 - hct)
     return ca
 end
@@ -129,16 +126,12 @@ The timepoints `t` are in minutes with the bolus arriving at 0.
 The model parameters from the paper will be used by default unless an optional `params` input is provided.
 The `hct` is used to convert the concentration in blood to plasma and has default value of 0.42.
 """
-function aif_orton1(
-    t;
-    params = (aB = 10.4, μB = 12.0, aG = 1.24, μG = 0.169),
-    hct = 0.42,
-)
+function aif_orton1(t; params = (aB = 10.4, μB = 12.0, aG = 1.24, μG = 0.169), hct = 0.42)
     @extract (aB, μB, aG, μG) params
     AB = aB - aB * aG / (μB - μG)
     AG = aB * aG / (μB - μG)
     cb = [AB * exp(-μB * t) + AG * exp(-μG * t) for t in t]
-    cb[t .< 0] .= 0
+    cb[t.<0] .= 0
     ca = cb ./ (1 - hct)
     return ca
 end
@@ -152,16 +145,12 @@ The timepoints `t` are in minutes with the bolus arriving at 0.
 The model parameters from the paper will be used by default unless an optional `params` input is provided.
 The `hematocrit` is used to convert the concentration in blood to plasma and has default value of 0.42.
 """
-function aif_orton2(
-    t;
-    params = (aB = 344, μB = 20.2, aG = 1.24, μG = 0.172),
-    hct = 0.42,
-)
+function aif_orton2(t; params = (aB = 344, μB = 20.2, aG = 1.24, μG = 0.172), hct = 0.42)
     @extract (aB, μB, aG, μG) params
     AB = aB - aB * aG / (μB - μG)
     AG = aB * aG / (μB - μG)^2
     cb = [AB * t * exp(-μB * t) + AG * (exp(-μG * t) - exp(-μB * t)) for t in t]
-    cb[t .<= 0] .= 0
+    cb[t.<=0] .= 0
     ca = cb ./ (1 - hct)
     return ca
 end
@@ -175,11 +164,7 @@ The timepoints `t` are in minutes with the bolus arriving at `t = 0`.
 The model parameters from the paper will be used by default unless an optional `params` input is provided.
 The `hct` is used to convert the concentration in blood to plasma and has default value of 0.42.
 """
-function aif_orton3(
-    t;
-    params = (aB = 2.84, μB = 22.8, aG = 1.36, μG = 0.171),
-    hct = 0.42,
-)
+function aif_orton3(t; params = (aB = 2.84, μB = 22.8, aG = 1.36, μG = 0.171), hct = 0.42)
     @extract (aB, μB, aG, μG) params
     tb = 2 * pi / μB
     cb = zeros(length(t))
@@ -190,7 +175,7 @@ function aif_orton3(
             cb[i] = aB * aG * _orton3_f(tb, μG, μB) * exp(-μG * (t - tb))
         end
     end
-    cb[t .<= 0] .= 0
+    cb[t.<=0] .= 0
     ca = cb ./ (1 - hct)
     return ca
 end

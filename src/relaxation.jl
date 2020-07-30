@@ -61,14 +61,14 @@ function signal_to_concentration(S; R10, angle, TR, r1, BAF::Int = 1, mask = tru
     return Ct
 end
 
-function fit_relaxation_despot(
-    ;
+function fit_relaxation_despot(;
     signal::AbstractArray,
     angles::AbstractVector,
     TR::Real,
     mask = true,
 )
-    (signal, angles, mask, num_angles, volume_size) = resolve_relaxation_inputs(; signal, angles, mask)
+    (signal, angles, mask, num_angles, volume_size) =
+        resolve_relaxation_inputs(; signal, angles, mask)
     M0, T1 = (fill(NaN, volume_size...) for _ = 1:2)
 
     for idx in eachindex(IndexCartesian(), mask)
@@ -97,14 +97,14 @@ function _despot(signal::AbstractVector, alpha::AbstractVector, TR)
     return M0, T1
 end
 
-function fit_relaxation_novifast(
-    ;
+function fit_relaxation_novifast(;
     signal::AbstractArray,
     angles::AbstractVector,
     TR::Real,
     mask = true,
 )
-    (signal, angles, mask, num_angles, volume_size) = resolve_relaxation_inputs(; signal, angles, mask)
+    (signal, angles, mask, num_angles, volume_size) =
+        resolve_relaxation_inputs(; signal, angles, mask)
     M0, T1 = (fill(NaN, volume_size...) for _ = 1:2)
 
     for idx in eachindex(IndexCartesian(), mask)
@@ -125,10 +125,8 @@ function _novifast(
     maxiter = 10,
     tol = 1e-6,
 )
-    est = [
-        initialvalues.M0 * (1 * exp(-TR / initialvalues.T1)),
-        exp(-TR / initialvalues.T1),
-    ]
+    est =
+        [initialvalues.M0 * (1 * exp(-TR / initialvalues.T1)), exp(-TR / initialvalues.T1)]
     sinα = sin.(alpha)
     cosα = cos.(alpha)
     k = 0
@@ -167,15 +165,15 @@ function _novifast(
 end
 
 
-function fit_relaxation_nls(
-    ;
+function fit_relaxation_nls(;
     signal::AbstractArray,
     angles::AbstractVector,
     TR::Real,
     initialvalues = (M0 = 5000.0, T1 = 1500.0),
     mask = true,
 )
-    (signal, angles, mask, num_angles, volume_size) = resolve_relaxation_inputs(; signal, angles, mask)
+    (signal, angles, mask, num_angles, volume_size) =
+        resolve_relaxation_inputs(; signal, angles, mask)
     M0, T1 = (fill(NaN, volume_size...) for _ = 1:2)
 
     @. model(x, p) = _spgr(x, p[1], 1 / p[2], TR)
