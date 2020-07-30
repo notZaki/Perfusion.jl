@@ -11,7 +11,7 @@ const _parker_parameters = (
 """
     aif_parker(timepoints; parameters, hematocrit = 0.42)
 
-Returns the concentration in blood plasma using the model defined in Parker et al. (2006, MRM 56(5). DOI: 10.1002/mrm.21066).
+Returns the concentration in blood plasma using the model defined in Parker et al. [@Parker2006].
 The `timepoints` input is in minutes with the bolus arriving at 0.
 The model parameters from the paper will be used by default unless an optional `parameters` input is provided.
 The `hematocrit` is used to convert the concentration in blood to plasma and has default value of 0.42.
@@ -37,7 +37,7 @@ const _georgiou_parameters = (
 """
     aif_georgiou(timepoints; parameters, hematocrit = 0.35)
 
-Returns the concentration in blood plasma using the model defined in Georgiou et al. (2019, MRM 81(3), DOI: 10.1002/mrm.27524).
+Returns the concentration in blood plasma using the model defined in Georgiou et al. [@Georgiou2018].
 The `timepoints` input is in minutes with the bolus arriving at 0.
 The model parameters from the paper will be used by default unless an optional `parameters` input is provided.
 The `hematocrit` is used to convert the concentration in blood to plasma and has default value of 0.35.
@@ -97,8 +97,7 @@ end
     aif_weinmann(timepoints)
 
 Returns an AIF defined by the biexponential model with parameters from
-Tofts & Kermode (1991, MRM 17(2), DOI: 10.1002/mrm.1910170208) and
-Weinmann et al. (1984, Phys. Chem. Phys. Med. NMR 16).
+Tofts & Kermode [@Tofts1991] and Weinmann et al. [@Weinmann1984].
 The `timepoints` input is in minutes with the bolus arriving at 0.
 The model describes concentration in plasma, therefore a hematocrit is not necessary.
 """
@@ -111,8 +110,8 @@ end
     aif_fritzhansen(timepoints)
 
 Returns an AIF defined by the biexponential model with parameters based on data from
-Fritz-Hansen et al. (1996, MRM 36(2), DOI: 10.1002/mrm.1910360209).
-The model parameters were obtained from Whitcher & Schmid (2011, Journal of Statistical Software, 44(5))
+Fritz-Hansen et al. [@Fritz-Hansen1996].
+The model parameters were obtained from Whitcher & Schmid [@Whitcher2011]
 The `timepoints` input is in minutes with the bolus arriving at 0.
 The model describes concentration in plasma, therefore a hematocrit is not necessary.
 """
@@ -129,7 +128,7 @@ end
     aif_orton1(timepoints; parameters, hematocrit = 0.42)
 
 Returns the concentration in blood plasma using the bi-exponential model defined in
-Orton et al. (2008, Phys. Med. Biol. 53(5), DOI: 10.1088/0031-9155/53/5/005).
+Orton et al. [@Orton2008].
 The `timepoints` input is in minutes with the bolus arriving at 0.
 The model parameters from the paper will be used by default unless an optional `parameters` input is provided.
 The `hematocrit` is used to convert the concentration in blood to plasma and has default value of 0.42.
@@ -152,7 +151,7 @@ end
     aif_orton2(timepoints; parameters, hematocrit = 0.42)
 
 Returns the concentration in blood plasma using the 2nd model defined in
-Orton et al. (2008, Phys. Med. Biol. 53(5), DOI: 10.1088/0031-9155/53/5/005).
+Orton et al. [@Orton2008].
 The `timepoints` input is in minutes with the bolus arriving at 0.
 The model parameters from the paper will be used by default unless an optional `parameters` input is provided.
 The `hematocrit` is used to convert the concentration in blood to plasma and has default value of 0.42.
@@ -175,7 +174,7 @@ end
     aif_orton3(timepoints; parameters, hematocrit = 0.42)
 
 Returns the concentration in blood plasma using the 3rd model defined in
-Orton et al. (2008, Phys. Med. Biol. 53(5), DOI: 10.1088/0031-9155/53/5/005).
+Orton et al. [@Orton2008].
 The `timepoints` input is in minutes with the bolus arriving at 0.
 The model parameters from the paper will be used by default unless an optional `parameters` input is provided.
 The `hematocrit` is used to convert the concentration in blood to plasma and has default value of 0.42.
