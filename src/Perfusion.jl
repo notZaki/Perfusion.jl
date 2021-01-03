@@ -1,17 +1,22 @@
 module Perfusion
 
 include("utils.jl")
-export @extract, interquartile_mean, percent_error, make_folder, readpath
+export @extract, interquartile_mean, percent_error, apply_mask, crop
+
+using DICOM
+include("load_dicom.jl")
+export load_vfa_dicom, load_dce_dicom
 
 using LinearAlgebra: norm
 using LsqFit
 using Statistics: mean
 include("relaxation.jl")
-export spgr,
-       concentration_to_R1,
-       concentration_to_signal,
-       signal_to_concentration,
-       signal_to_R1
+export signal_to_concentration,
+    concentration_to_signal,
+    signal_to_R1,
+    R1_to_signal,
+    concentration_to_R1,
+    R1_to_concentration
 export fit_relaxation, fit_relaxation_nls, fit_relaxation_despot, fit_relaxation_novifast
 
 using SpecialFunctions: gamma
@@ -35,5 +40,8 @@ export fit_filtration_nls, fit_filtration_lls
 export fit_rrm_nls, fit_rrm_lls, fit_crrm_nls, fit_crrm_lls
 export fit_errm_lls, fit_cerrm_lls
 export fit_rrift, fit_rrift_with_crrm, fit_rrift_with_cerrm
+
+using CancerImagingArchive
+include("invivo_demo.jl")
 
 end # module

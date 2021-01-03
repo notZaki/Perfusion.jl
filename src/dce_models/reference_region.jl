@@ -1,10 +1,10 @@
 function model_referenceregion(
     conv::Function = expconv;
     t::AbstractVector,
-    parameters::NamedTuple,
+    params::NamedTuple,
     crr::AbstractVector,
 )
-    @extract (rel_kt, kep, kep_rr) parameters
+    @extract (rel_kt, kep, kep_rr) params
     ct = rel_kt .* crr .+ (rel_kt * (kep_rr - kep)) .* conv(crr, kep, t)
     return ct
 end
@@ -16,56 +16,44 @@ function fit_rrm_nls(
     ct::AbstractArray,
     mask = true,
 )
-    @assert length(t) == length(crr) == size(ct)[end]
-    num_timepoints = length(t)
-    if typeof(ct) <: AbstractVector
-        @assert length(ct) == num_timepoints
-        ct = reshape(ct, 1, num_timepoints)
-    end
-    volume_size = size(ct)[1:end-1]
+    (t, ct, mask, num_timepoints, volume_size) =
+        resolve_fitting_inputs(; t, ca = crr, ct, mask)
     rel_kt, kep, kep_rr = (fill(NaN, volume_size...) for _ = 1:3)
-    resolved_mask = resolve_mask_size(mask, volume_size)
-    lls_estimates = fit_rrm_lls(t = t, crr = crr, ct = ct, mask = mask).estimates
-    init_rel_kt, init_kep, init_kep_rr = select(lls_estimates, (:rel_kt, :kep, :kep_rr))
+    lls_est = fit_rrm_lls(; t, crr, ct, mask).est
+    init_rel_kt, init_kep, init_kep_rr = select(lls_est, (:rel_kt, :kep, :kep_rr))
     model(x, p) = model_referenceregion(
-    conv;
-    t = x,
-    crr = crr,
-    parameters = (rel_kt = p[1], kep = p[2], kep_rr = p[3]),
+        conv;
+        t = x,
+        crr,
+        params = (rel_kt = p[1], kep = p[2], kep_rr = p[3]),
     )
-    for idx in eachindex(IndexCartesian(), resolved_mask)
-        if resolved_mask[idx] == false
+    for idx in eachindex(IndexCartesian(), mask)
+        if mask[idx] == false
             continue
         end
         initialvalues = [init_rel_kt[idx], init_kep[idx], init_kep_rr[idx]]
-        rel_kt[idx], kep[idx], kep_rr[idx] = curve_fit(model, t, ct[idx, :], initialvalues).param
+        rel_kt[idx], kep[idx], kep_rr[idx] =
+            curve_fit(model, t, ct[idx, :], initialvalues).param
     end
     rel_ve = @. rel_kt * kep_rr / kep
-    return (estimates = (rel_kt = rel_kt, rel_ve = rel_ve, kep = kep, kep_rr = kep_rr),)
+    return (; est = (; rel_kt, rel_ve, kep, kep_rr))
 end
 
-function fit_rrm_lls(
-    ;
+function fit_rrm_lls(;
     t::AbstractVector,
     crr::AbstractVector,
     ct::AbstractArray,
     mask = true,
 )
-    @assert length(t) == length(crr) == size(ct)[end]
-    num_timepoints = length(t)
-    if typeof(ct) <: AbstractVector
-        @assert length(ct) == num_timepoints
-        ct = reshape(ct, 1, num_timepoints)
-    end
-    volume_size = size(ct)[1:end-1]
+    (t, ct, mask, num_timepoints, volume_size) =
+        resolve_fitting_inputs(; t, ca = crr, ct, mask)
     x1, x2, x3 = (fill(NaN, volume_size...) for _ = 1:3)
-    resolved_mask = resolve_mask_size(mask, volume_size)
 
     M = zeros(num_timepoints, 3)
     M[:, 1] = crr
     M[:, 2] = cumul_integrate(t, crr, TrapezoidalFast())
-    for idx in eachindex(IndexCartesian(), resolved_mask)
-        if resolved_mask[idx] == false
+    for idx in eachindex(IndexCartesian(), mask)
+        if mask[idx] == false
             continue
         end
         M[:, 3] = -cumul_integrate(t, ct[idx, :], TrapezoidalFast())
@@ -76,10 +64,7 @@ function fit_rrm_lls(
     rel_ve = x2 ./ x3
     kep = x3
     kep_rr = x2 ./ x1
-    return (
-        estimates = (rel_kt = rel_kt, rel_ve = rel_ve, kep = kep, kep_rr = kep_rr),
-        dummy = 0,
-    )
+    return (; est = (; rel_kt, rel_ve, kep, kep_rr))
 end
 
 function fit_crrm_nls(
@@ -90,99 +75,80 @@ function fit_crrm_nls(
     mask = true,
     kep_rr = 0.0,
 )
-    @assert length(t) == length(crr) == size(ct)[end]
-    num_timepoints = length(t)
-    if typeof(ct) <: AbstractVector
-        @assert length(ct) == num_timepoints
-        ct = reshape(ct, 1, num_timepoints)
-    end
-    volume_size = size(ct)[1:end-1]
+    (t, ct, mask, num_timepoints, volume_size) =
+        resolve_fitting_inputs(; t, ca = crr, ct, mask)
     rel_kt, kep = (fill(NaN, volume_size...) for _ = 1:2)
-    resolved_mask = resolve_mask_size(mask, volume_size)
+
     if kep_rr <= 0
-        rrm_estimates = fit_rrm_nls(conv; t = t, crr = crr, ct = ct, mask = mask).estimates
-        viable_estimates = positive_only_mask(rrm_estimates)
-        kep_rr = interquartile_mean(rrm_estimates.kep_rr[viable_estimates])
+        rrm_est = fit_rrm_nls(conv; t, crr, ct, mask).est
+        viable_est = positive_only_mask(rrm_est)
+        kep_rr = interquartile_mean(rrm_est.kep_rr[viable_est])
     end
-    lls_estimates = fit_crrm_lls(t = t, crr = crr, ct = ct, kep_rr = kep_rr, mask = mask).estimates
-    init_rel_kt, init_kep = select(lls_estimates, (:rel_kt, :kep))
+    lls_est = fit_crrm_lls(; t, crr, ct, kep_rr, mask = mask).est
+    init_rel_kt, init_kep = select(lls_est, (:rel_kt, :kep))
     model(x, p) = model_referenceregion(
-    conv;
-    t = x,
-    crr = crr,
-    parameters = (rel_kt = p[1], kep = p[2], kep_rr = kep_rr),
+        conv;
+        t = x,
+        crr,
+        params = (rel_kt = p[1], kep = p[2], kep_rr = kep_rr),
     )
-    for idx in eachindex(IndexCartesian(), resolved_mask)
-        if resolved_mask[idx] == false
+    for idx in eachindex(IndexCartesian(), mask)
+        if mask[idx] == false
             continue
         end
         initialvalues = [init_rel_kt[idx], init_kep[idx]]
         rel_kt[idx], kep[idx] = curve_fit(model, t, ct[idx, :], initialvalues).param
     end
     rel_ve = @. rel_kt * kep_rr / kep
-    return (estimates = (rel_kt = rel_kt, rel_ve = rel_ve, kep = kep, kep_rr = kep_rr),)
+    return (; est = (; rel_kt, rel_ve, kep, kep_rr))
 end
 
-function fit_crrm_lls(
-    ;
+function fit_crrm_lls(;
     t::AbstractVector,
     crr::AbstractVector,
     ct::AbstractArray,
     mask = true,
     kep_rr = 0.0,
 )
-    @assert length(t) == length(crr) == size(ct)[end]
-    num_timepoints = length(t)
-    if typeof(ct) <: AbstractVector
-        @assert length(ct) == num_timepoints
-        ct = reshape(ct, 1, num_timepoints)
-    end
-    volume_size = size(ct)[1:end-1]
+    (t, ct, mask, num_timepoints, volume_size) =
+        resolve_fitting_inputs(; t, ca = crr, ct, mask)
     rel_kt, kep = (fill(NaN, volume_size...) for _ = 1:2)
-    resolved_mask = resolve_mask_size(mask, volume_size)
 
     if kep_rr <= 0
-        rrm_estimates = fit_rrm_lls(t = t, crr = crr, ct = ct, mask = mask).estimates
-        viable_estimates = positive_only_mask(rrm_estimates)
-        kep_rr = interquartile_mean(rrm_estimates.kep_rr[viable_estimates])
+        rrm_est = fit_rrm_lls(; t, crr, ct, mask).est
+        viable_est = positive_only_mask(rrm_est)
+        kep_rr = interquartile_mean(rrm_est.kep_rr[viable_est])
     end
 
     M = zeros(num_timepoints, 2)
     M[:, 1] = crr + kep_rr * cumul_integrate(t, crr, TrapezoidalFast())
-    for idx in eachindex(IndexCartesian(), resolved_mask)
-        if resolved_mask[idx] == false
+    for idx in eachindex(IndexCartesian(), mask)
+        if mask[idx] == false
             continue
         end
         M[:, 2] = -cumul_integrate(t, ct[idx, :], TrapezoidalFast())
         rel_kt[idx], kep[idx] = M \ ct[idx, :]
     end
     rel_ve = @. rel_kt * kep_rr / kep
-    return (estimates = (rel_kt = rel_kt, rel_ve = rel_ve, kep = kep, kep_rr = kep_rr),)
+    return (est = (rel_kt = rel_kt, rel_ve = rel_ve, kep = kep, kep_rr = kep_rr),)
 end
 
-function fit_errm_lls(
-    ;
+function fit_errm_lls(;
     t::AbstractVector,
     crr::AbstractVector,
     ct::AbstractArray,
     mask = true,
 )
-    @assert length(t) == length(crr) == size(ct)[end]
-    num_timepoints = length(t)
-    if typeof(ct) <: AbstractVector
-        @assert length(ct) == num_timepoints
-        ct = reshape(ct, 1, num_timepoints)
-    end
-    volume_size = size(ct)[1:end-1]
+    (t, ct, mask, num_timepoints, volume_size) =
+        resolve_fitting_inputs(; t, ca = crr, ct, mask)
     x1, x2, x3, x4 = (fill(NaN, volume_size...) for _ = 1:4)
-    resolved_mask = resolve_mask_size(mask, volume_size)
 
     M = zeros(num_timepoints, 4)
     M[:, 1] = cumul_integrate(t, crr, TrapezoidalFast())
     M[:, 2] = cumul_integrate(t, M[:, 1], TrapezoidalFast())
     M[:, 4] = crr
-    for idx in eachindex(IndexCartesian(), resolved_mask)
-        if resolved_mask[idx] == false
+    for idx in eachindex(IndexCartesian(), mask)
+        if mask[idx] == false
             continue
         end
         cur_ct = cumul_integrate(t, ct[idx, :], TrapezoidalFast())
@@ -199,37 +165,24 @@ function fit_errm_lls(
     rel_ve = @. rel_kt * kep_rr / x3
     kep = x3
     rel_vp = x4
-    return (estimates = (
-        rel_kt = rel_kt,
-        rel_ve = rel_ve,
-        rel_vp = rel_vp,
-        kep = kep,
-        kep_rr = kep_rr,
-    ),)
+    return (; est = (; rel_kt, rel_ve, rel_vp, kep, kep_rr))
 end
 
-function fit_cerrm_lls(
-    ;
+function fit_cerrm_lls(;
     t::AbstractVector,
     crr::AbstractVector,
     ct::AbstractArray,
     mask = true,
     kep_rr = 0.0,
 )
-    @assert length(t) == length(crr) == size(ct)[end]
-    num_timepoints = length(t)
-    if typeof(ct) <: AbstractVector
-        @assert length(ct) == num_timepoints
-        ct = reshape(ct, 1, num_timepoints)
-    end
-    volume_size = size(ct)[1:end-1]
+    (t, ct, mask, num_timepoints, volume_size) =
+        resolve_fitting_inputs(; t, ca = crr, ct, mask)
     x1, rel_vp, kep = (fill(NaN, volume_size...) for _ = 1:3)
-    resolved_mask = resolve_mask_size(mask, volume_size)
 
     if kep_rr <= 0
-        rrm_estimates = fit_errm_lls(t = t, crr = crr, ct = ct, mask = mask).estimates
-        viable_estimates = positive_only_mask(rrm_estimates)
-        kep_rr = interquartile_mean(rrm_estimates.kep_rr[viable_estimates])
+        rrm_est = fit_errm_lls(; t, crr, ct, mask).est
+        viable_est = positive_only_mask(rrm_est)
+        kep_rr = interquartile_mean(rrm_est.kep_rr[viable_est])
     end
 
     M = zeros(num_timepoints, 3)
@@ -237,8 +190,8 @@ function fit_cerrm_lls(
     crr_int2 = cumul_integrate(t, crr_int, TrapezoidalFast())
     M[:, 1] = crr_int + kep_rr * crr_int2
     M[:, 2] = crr + kep_rr * crr_int
-    for idx in eachindex(IndexCartesian(), resolved_mask)
-        if resolved_mask[idx] == false
+    for idx in eachindex(IndexCartesian(), mask)
+        if mask[idx] == false
             continue
         end
         cur_ct = cumul_integrate(t, ct[idx, :], TrapezoidalFast())
@@ -247,50 +200,28 @@ function fit_cerrm_lls(
     end
     rel_kt = @. x1 - kep * rel_vp
     rel_ve = @. rel_kt * kep_rr / kep
-    return (estimates = (
-        rel_kt = rel_kt,
-        rel_ve = rel_ve,
-        rel_vp = rel_vp,
-        kep = kep,
-        kep_rr = kep_rr,
-    ),)
+    return (; est = (; rel_kt, rel_ve, rel_vp, kep, kep_rr))
 end
 
 function fit_rrift_with_cerrm(; crr, cp, t, ct, tail_start, kep_rr = 0.0, mask = true)
-    cerrm = fit_cerrm_lls(crr = crr, ct = ct, t = t, kep_rr = kep_rr, mask = mask).estimates
+    cerrm = fit_cerrm_lls(; crr, ct, t, kep_rr, mask).est
     kep_rr = cerrm.kep_rr
-    kt_rr = fit_rrift(t = t, cp = cp, crr = crr, kep_rr = kep_rr, tail_start = tail_start)
+    kt_rr = fit_rrift(; t, cp, crr, kep_rr, tail_start)
     ve_rr = kt_rr / kep_rr
-    est = relative_to_absolute(cerrm; kt_rr = kt_rr, ve_rr = ve_rr)
-    return (estimates = (
-        kt = est.kt,
-        kep = est.kep,
-        ve = est.ve,
-        vp = est.vp,
-        kep_rr = kep_rr,
-        kt_rr = kt_rr,
-        ve_rr = ve_rr,
-    ),)
+    est = relative_to_absolute(cerrm; kt_rr, ve_rr)
+    return (est = (; est..., kep_rr, kt_rr, ve_rr))
 end
 
 function fit_rrift_with_crrm(; crr, cp, t, ct, tail_start, kep_rr = 0.0, mask = true)
-    crrm = fit_crrm_lls(crr = crr, ct = ct, t = t, kep_rr = kep_rr, mask = mask).estimates
+    crrm = fit_crrm_lls(; crr, ct, t, kep_rr, mask).est
     kep_rr = crrm.kep_rr
-    kt_rr = fit_rrift(t = t, cp = cp, crr = crr, kep_rr = kep_rr, tail_start = tail_start)
+    kt_rr = fit_rrift(; t, cp, crr, kep_rr, tail_start)
     ve_rr = kt_rr / kep_rr
-    est = relative_to_absolute(crrm; kt_rr = kt_rr, ve_rr = ve_rr)
-    return (estimates = (
-        kt = est.kt,
-        kep = est.kep,
-        ve = est.ve,
-        kep_rr = kep_rr,
-        kt_rr = kt_rr,
-        ve_rr = ve_rr,
-    ),)
+    est = relative_to_absolute(crrm; kt_rr, ve_rr)
+    return (est = (; est..., kep_rr, kt_rr, ve_rr))
 end
 
-function fit_rrift(
-    ;
+function fit_rrift(;
     crr::AbstractVector,
     cp::AbstractVector,
     t::AbstractVector,
@@ -302,8 +233,9 @@ function fit_rrift(
     crr_tail = crr[tail_start:end]
     cp_tail = cp[tail_start:end]
     t_tail = t[tail_start:end]
-    numerator = crr_tail .- crr_tail[1] .+
-                kep_rr .* cumul_integrate(t_tail, crr_tail, TrapezoidalFast())
+    numerator =
+        crr_tail .- crr_tail[1] .+
+        kep_rr .* cumul_integrate(t_tail, crr_tail, TrapezoidalFast())
     denominator = cumul_integrate(t_tail, cp_tail, TrapezoidalFast())
     kt_rr = denominator \ numerator
     return kt_rr

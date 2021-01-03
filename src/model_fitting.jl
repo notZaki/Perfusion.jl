@@ -44,14 +44,8 @@ const model_dict = Dict{Symbol,Dict{Symbol,Function}}(
         :nls => fit_crrm_nls,
         :default => fit_crrm_nls,
     ),
-    :errm => Dict{Symbol,Function}(
-        :lls => fit_errm_lls,
-        :default => fit_errm_lls,
-    ),
-    :cerrm => Dict{Symbol,Function}(
-        :lls => fit_cerrm_lls,
-        :default => fit_cerrm_lls,
-    ),
+    :errm => Dict{Symbol,Function}(:lls => fit_errm_lls, :default => fit_errm_lls),
+    :cerrm => Dict{Symbol,Function}(:lls => fit_cerrm_lls, :default => fit_cerrm_lls),
     :rrift => Dict{Symbol,Function}(
         :crrm => fit_rrift_with_crrm,
         :cerrm => fit_rrift_with_cerrm,
