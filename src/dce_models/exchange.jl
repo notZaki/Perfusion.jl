@@ -20,8 +20,10 @@ function _model_exchange(conv, t, params, ca)
     Tp = vp / fp
     Te = ve / ps
     T = (vp + ve) / fp
-    Tplus = (T + Te + sqrt((T + Te)^2 - 4 * Tp * Te)) / 2
-    Tminus = (T + Te - sqrt((T + Te)^2 - 4 * Tp * Te)) / 2
+    sqrt_term = (T + Te)^2 - 4 * Tp * Te
+    sqrt_term = max(0, sqrt_term)
+    Tplus = (T + Te + sqrt(sqrt_term)) / 2
+    Tminus = (T + Te - sqrt(sqrt_term)) / 2
     ct = ((T - Tminus) / (Tplus - Tminus)) .* conv(ca, 1 / Tplus, t)
     ct .+= ((Tplus - T) / (Tplus - Tminus)) .* conv(ca, 1 / Tminus, t)
     ct .*= fp

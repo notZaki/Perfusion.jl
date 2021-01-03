@@ -3,7 +3,7 @@ function spgr(; M0, angle, TR, R1, R2star = 0.0, TE = 0.0)
               (1 - cos(angle) * exp(-R1 * TR))
 end
 
-function concentration_to_R1(Ct; r1, R10)
+function conc_to_R1(Ct; r1, R10)
     return @. R10 + r1 * Ct
 end
 
@@ -27,11 +27,8 @@ function signal_to_R1(signal; R10, angle, TR, BAF::Int = 1, mask = [true])
     resolved_R10 = unify_size(R10, volume_size)
     resolved_mask = resolve_mask_size(mask, volume_size)
 
-    for idx in eachindex(IndexCartesian(), resolved_mask)
-        if resolved_mask[idx] == false
-            continue
-        end
-        R1[idx, :] = _signal_to_R1(signal[idx, :], resolved_R10[idx], angle, TR, BAF)
+    for voxel in findall(resolved_mask)
+        R1[voxel, :] = _signal_to_R1(signal[voxel, :], resolved_R10[voxel], angle, TR, BAF)
     end
     if input_was_vector
         R1 = R1[:]

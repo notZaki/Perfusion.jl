@@ -7,7 +7,7 @@ function load_vfa_dicom(dir)
 
     dummy_image = lookup(dicoms[1], "Pixel Data")
     image_size = size(dummy_image)
-    signal = zeros(image_size..., num_images)
+    signal = zeros(num_images, image_size...)
     flip_angles = zeros(num_images)
     for dicom in dicoms
         instance = lookup(dicom, "Instance Number")
